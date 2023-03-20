@@ -480,7 +480,7 @@ class PPOAgent:
                     used_gpu_memory = 0
                     for p in procs:
                         try:
-                            if "python" in psutil.Process(p.pid).name():
+                            if "python" in psutil.Process(p.pid).name() and p.usedGpuMemory is not None:
                                 used_gpu_memory += p.usedGpuMemory
                         except NoSuchProcess:
                             pass
