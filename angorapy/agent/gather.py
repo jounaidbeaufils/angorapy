@@ -252,7 +252,7 @@ class Gatherer(BaseGatherer):
 
         return action, action_probability
 
-class VarGatherer(BaseGatherer):
+class VarGatherer(Gatherer):
     """Var worker implementation for collecting experience by rolling out a policy."""
 
     def collect(self,
