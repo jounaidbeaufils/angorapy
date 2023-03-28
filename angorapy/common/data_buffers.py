@@ -178,7 +178,7 @@ class VarExperienceBuffer(ExperienceBuffer):
 
         Individual buffers include a leading batch dimension."""
 
-        super.__init__(capacity, state_dim, action_dim, is_continuous)
+        super().__init__(capacity, state_dim, action_dim, is_continuous)
 
         # data buffers
         self.pseudo_variance = np.empty((capacity,), dtype=np.float32)
@@ -186,6 +186,6 @@ class VarExperienceBuffer(ExperienceBuffer):
     def fill(self, s: List[Sensation], a: arr, ap: arr, adv: arr, var: arr, ret: arr, v: arr, dones: arr, achieved_goals: arr):
         assert np.all(np.array(list(map(len, [s, a, ap, ret, adv, var, v]))) == len(s)), f"Inconsistent input sizes: {np.array(list(map(len, [s, a, ap, ret, adv, var, v])))}"
 
-        super.fill(s, a, ap, adv, ret, v, dones, achieved_goals)
+        super().fill(s, a, ap, adv, ret, v, dones, achieved_goals)
 
         self.pseudo_variance = var
