@@ -169,3 +169,23 @@ class TimeSequenceExperienceBuffer(ExperienceBuffer):
         mean = masked_advantages.mean()
         std = np.maximum(masked_advantages.std(), 1e-6)
         self.advantages = (self.advantages - mean) / std
+
+class VarExperienceBuffer(ExperienceBuffer):
+    """Buffer for experience gathered by a single worker, Variance enabled version."""
+
+    def __init__(self, capacity: int, state_dim: Dict[str, Tuple[int]], action_dim: Tuple[int], is_continuous: bool):
+        """Initialize the buffer with empty numpy arrays.
+
+        Individual buffers include a leading batch dimension."""
+
+        super.__init__(capacity, state_dim, action_dim, is_continuous)
+
+        # data buffers
+        self.pseudo_variance = np.empty((capacity,), dtype=np.float32)
+
+    def fill(self, s: List[Sensation], a: arr, ap: arr, adv: arr, var: arr, ret: arr, v: arr, dones: arr, achieved_goals: arr):
+        assert np.all(np.array(list(map(len, [s, a, ap, ret, adv, var, v]))) == len(s)), f"Inconsistent input sizes: {np.array(list(map(len, [s, a, ap, ret, adv, var, v])))}"
+
+        super.fill(s, a, ap, adv, ret, v, dones, achieved_goals)
+
+        self.pseudo_variance = var
