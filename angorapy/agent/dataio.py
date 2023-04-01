@@ -13,7 +13,7 @@ from mpi4py import MPI
 from angorapy.common.const import STORAGE_DIR
 from angorapy.common.senses import Sensation
 from angorapy.utilities.datatypes import StatBundle
-from angorapy.common.data_buffers import ExperienceBuffer, TimeSequenceExperienceBuffer
+from angorapy.common.data_buffers import ExperienceBuffer, TimeSequenceExperienceBuffer, VarExperienceBuffer
 
 
 def _float_feature(value):
@@ -93,6 +93,47 @@ def make_dataset_and_stats(buffer: ExperienceBuffer) -> Tuple[tf.data.Dataset, S
 
     return dataset, stats
 
+def make_dataset_and_stats_with_var(buffer: VarExperienceBuffer) -> Tuple[tf.data.Dataset, StatBundle]:
+    """Make dataset object and StatBundle from ExperienceBuffer."""
+    completed_episodes = buffer.episodes_completed
+    numb_processed_frames = buffer.capacity * buffer.seq_length
+
+    # build the dataset
+    tensor_slices = {
+        "action": buffer.actions,
+        "action_prob": buffer.action_probabilities,
+        "return": buffer.returns,
+        "advantage": buffer.advantages,
+        "pseudo_variance": buffer.pseudo_variance,
+        "value": buffer.values,
+        "done": buffer.dones,
+        "mask": buffer.mask
+    }
+
+    tensor_slices.update(buffer.states)
+
+    dataset = tf.data.TFRecordDataset.from_tensor_slices(tensor_slices)
+
+    # make statistics object
+    underflow = None
+    if isinstance(buffer, TimeSequenceExperienceBuffer):
+        underflow = round(1 - (buffer.true_number_of_transitions / (buffer.capacity * buffer.seq_length)), 2)
+
+    stats = StatBundle(
+        completed_episodes,
+        numb_processed_frames,
+        buffer.episode_rewards,
+        buffer.episode_lengths,
+        tbptt_underflow=underflow,
+        per_receptor_mean={
+            # mean over all buf the last dimension to mean per receptor (reducing batch and time dimensions)
+            # todo ignore empty masked states
+            sense: np.mean(buffer.states[sense], axis=tuple(range(len(buffer.states[sense].shape)))[:-1])
+            for sense in buffer.states.keys()
+        }
+    )
+
+    return dataset, stats
 
 def read_dataset_from_storage(dtype_actions: tf.dtypes.DType, id_prefix: Union[str, int], responsive_senses: List[str],
                               shuffle: bool = True, worker_ids: List = None):

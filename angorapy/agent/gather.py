@@ -10,7 +10,7 @@ import tensorflow as tf
 from gym.spaces import Box
 
 from angorapy.agent.core import estimate_episode_advantages
-from angorapy.agent.dataio import tf_serialize_example, make_dataset_and_stats, serialize_sample
+from angorapy.agent.dataio import tf_serialize_example, make_dataset_and_stats, serialize_sample, make_dataset_and_stats_with_var
 from angorapy.common.data_buffers import ExperienceBuffer, VarExperienceBuffer, TimeSequenceExperienceBuffer
 from angorapy.common.policies import BasePolicyDistribution
 from angorapy.common.senses import Sensation
@@ -420,7 +420,7 @@ class VarGatherer(Gatherer):
         buffer = self.postprocess(buffer, joint, env)
 
         # convert buffer to dataset and save it to tf record
-        dataset, stats = make_dataset_and_stats(buffer)
+        dataset, stats = make_dataset_and_stats_with_var(buffer)
         with tf.io.TFRecordWriter(f"{STORAGE_DIR}/{self.exp_id}_data_{collector_id}.tfrecord") as file_writer:
             feature_names = ([sense for sense in Sensation.sense_names if sense in observation]
                              + ["action", "action_prob", "return", "advantage", "pseudo_variance","value", "done", "mask"])

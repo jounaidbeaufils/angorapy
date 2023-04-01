@@ -5,7 +5,7 @@ from angorapy.common.senses import Sensation
 import gym
 import numpy as np
 
-env = gym.make("CartPole-v0")
+env = gym.make("CartPole-v1")
 
 state_dim, action_dim = env_extract_dims(env)
 
