@@ -98,3 +98,26 @@ def entropy_bonus(policy_output: tf.Tensor, distribution) -> tf.Tensor:
     """
 
     return tf.reduce_mean(distribution.entropy(policy_output))
+
+@tf.function
+def policy_pseudo_var(pseudo_variance: tf.Tensor,
+                mask: tf.Tensor,
+                is_recurrent: bool) -> tf.Tensor:
+    """pseudo variance as a measurure of reward variability.
+
+    Args:
+      pseudo_variance (tf.Tensor): the pseudo variance in reward after taking the action
+
+    Returns:
+      the value of the pseudo variance term.
+
+    """
+
+    tf.debugging.assert_all_finite(pseudo_variance, "pseudo variance is not all finite!")
+
+    if is_recurrent:
+        # build and apply a mask over the probabilities (recurrent)
+        clipped_masked = tf.where(mask, pseudo_variance, 1)
+        return tf.reduce_sum(clipped_masked) / tf.reduce_sum(tf.cast(mask, tf.float32))
+    else:
+        return tf.reduce_mean(pseudo_variance)
