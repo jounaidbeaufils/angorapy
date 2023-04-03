@@ -100,7 +100,7 @@ def entropy_bonus(policy_output: tf.Tensor, distribution) -> tf.Tensor:
     return tf.reduce_mean(distribution.entropy(policy_output))
 
 @tf.function
-def policy_pseudo_var(pseudo_variance: tf.Tensor,
+def policy_pseudo_var_loss(pseudo_variance: tf.Tensor,
                 mask: tf.Tensor,
                 is_recurrent: bool) -> tf.Tensor:
     """pseudo variance as a measurure of reward variability.
