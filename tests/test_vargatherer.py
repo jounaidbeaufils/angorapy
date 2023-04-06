@@ -11,7 +11,7 @@ try:
 except:
     is_root = True
 
-from angorapy.agent.ppo_agent import PPOAgent
+from angorapy.agent.ppo_agent import PPOAgent, VarPPOAgent
 from angorapy.common.policies import BetaPolicyDistribution
 from angorapy.common.transformers import RewardNormalizationTransformer, StateNormalizationTransformer
 from angorapy.common.wrappers import make_env
@@ -32,7 +32,7 @@ distribution = BetaPolicyDistribution(env)
 build_models = get_model_builder(model="simple", model_type="ffn", shared=False)
 
 # given the model builder and the environment we can create an agent
-agent = PPOAgent(build_models, env, horizon=1024, workers=12, distribution=distribution)
+agent = VarPPOAgent(build_models, env, horizon=1024, workers=12, distribution=distribution)
 
 # let's check the agents ID, so we can find its saved states after training
 print(f"My Agent's ID: {agent.agent_id}")
