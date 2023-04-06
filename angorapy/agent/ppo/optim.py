@@ -159,7 +159,7 @@ def learn_on_batch_with_var(batch,
                                                            is_recurrent=is_recurrent)
 
         # combine weighted losses
-        total_loss = policy_loss + tf.multiply(c_value, value_loss) - tf.multiply(c_entropy, entropy) + tf.multiply(c_entropy, pseudo_variance_loss)
+        total_loss = policy_loss + tf.multiply(c_value, value_loss) - tf.multiply(c_entropy, entropy) + tf.multiply(0.0, pseudo_variance_loss)
 
     # calculate the gradient of the joint model based on total loss
     gradients = tape.gradient(total_loss, joint.trainable_variables)
