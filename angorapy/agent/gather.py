@@ -255,6 +255,15 @@ class Gatherer(BaseGatherer):
 class VarGatherer(Gatherer):
     """Var worker implementation for collecting experience by rolling out a policy."""
 
+    # define __init__() overide to set default variance stragy
+    def __init__(self, worker_id: int, exp_id: int, distribution: BasePolicyDistribution, horizon: int, discount: float, lam: float, subseq_length: int):
+        super().__init__(worker_id, exp_id, distribution, horizon, discount, lam, subseq_length)
+        self.var_strategy = variance.absolute
+
+    # define assign_strategy() to set desired strategy
+    def assign_var_strategy(self, strategy):
+        self.var_strategy = strategy
+
     def collect(self,
                 joint: tf.keras.Model,
                 env: BaseWrapper,
@@ -348,7 +357,7 @@ class VarGatherer(Gatherer):
                 episode_returns = episode_advantages + values[-episode_steps:]
 
                 # calculate pseudo variance for the finished episode (Jounaid)
-                episode_variances = variance.absolute(rewards[-episode_steps:])
+                episode_variances = self.var_strategy(rewards[-episode_steps:])
 
                 if is_recurrent:
                     # skip as many steps as are missing to fill the subsequence, then push adv ant ret to buffer
@@ -386,7 +395,7 @@ class VarGatherer(Gatherer):
                                                               values[-episode_steps:],
                                                               self.discount, self.lam)
             # (Jounaid)
-            leftover_pseudo_variance = variance.absolute(rewards[-episode_steps + 1:])
+            leftover_pseudo_variance = self.var_strategy(rewards[-episode_steps + 1:])
             if is_recurrent:
                 leftover_returns = leftover_advantages + values[-len(leftover_advantages) - 1:-1]
                 buffer.push_adv_ret_to_buffer(leftover_advantages, leftover_returns)
