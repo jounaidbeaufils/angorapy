@@ -314,7 +314,7 @@ class VarGatherer(Gatherer):
             prepared_state = state.with_leading_dims(time=is_recurrent).dict_as_tf()
             policy_out = flatten(joint(prepared_state))
 
-            predicted_distribution_parameters, value = policy_out[:-1], policy_out[-1]
+            predicted_distribution_parameters, value = policy_out[:-2], policy_out[-1]
 
             # from the action distribution sample an action and remember both the action and its probability
             action, action_probability = self.select_action(predicted_distribution_parameters)

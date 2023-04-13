@@ -17,6 +17,7 @@ from angorapy.common.transformers import RewardNormalizationTransformer, StateNo
 from angorapy.common.wrappers import make_env
 
 from angorapy.models import get_model_builder, build_ffn_models
+from angorapy.models.simple import build_var_ffn_models
 
 from angorapy.agent.gather import VarGatherer
 
@@ -29,7 +30,7 @@ env = make_env("LunarLanderContinuous-v2", reward_config=None, transformers=wrap
 distribution = BetaPolicyDistribution(env)
 
 # the agent needs to create the model itself, so we build a method that builds a model
-build_models = build_ffn_models
+build_models = build_var_ffn_models
 
 # given the model builder and the environment we can create an agent
 agent = VarPPOAgent(build_models, env, horizon=1024, workers=1, distribution=distribution)

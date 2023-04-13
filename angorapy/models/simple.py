@@ -63,6 +63,64 @@ def build_ffn_models(env: BaseWrapper,
 
     return policy, value, tf.keras.Model(inputs=input_list, outputs=[out_policy, value_out], name="policy_value")
 
+def build_var_ffn_models(env: BaseWrapper,
+                     distribution: BasePolicyDistribution,
+                     shared: bool = False,
+                     layer_sizes: Tuple = (64, 64)):
+    """Build a simple fully connected feed-forward model model."""
+
+    # preparation
+    state_dimensionality, n_actions = env_extract_dims(env)
+
+    input_list = []
+    proprio = tf.keras.Input(shape=state_dimensionality["proprioception"], name="proprioception")
+    input_list.append(proprio)
+
+    if "somatosensation" in state_dimensionality.keys():
+        somato = tf.keras.Input(shape=state_dimensionality["somatosensation"], name="somatosensation")
+        input_list.append(somato)
+    if "goal" in state_dimensionality.keys():
+        goal = tf.keras.Input(shape=state_dimensionality["goal"], name="goal")
+        input_list.append(goal)
+
+    if len(input_list) > 1:
+        inputs = tf.keras.layers.Concatenate(name="flat_inputs")(input_list)
+    else:
+        inputs = input_list[0]
+
+    # policy network
+    latent = _build_encoding_sub_model(inputs.shape[1:], None, layer_sizes=layer_sizes, name="policy_encoder")(inputs)
+    out_policy = distribution.build_action_head(n_actions, (layer_sizes[-1],), None)(latent)
+
+    policy = tf.keras.Model(inputs=input_list, outputs=out_policy, name="policy")
+
+    # value network
+    if not shared:
+        value_latent = _build_encoding_sub_model(inputs.shape[1:], None, layer_sizes=layer_sizes,
+                                                 name="value_encoder")(inputs)
+        value_out = tf.keras.layers.Dense(1, kernel_initializer=tf.keras.initializers.Orthogonal(1.0),
+                                          bias_initializer=tf.keras.initializers.Constant(0.0))(value_latent)
+    else:
+        value_out = tf.keras.layers.Dense(1, input_dim=layer_sizes[-1],
+                                          kernel_initializer=tf.keras.initializers.Orthogonal(1.0),
+                                          bias_initializer=tf.keras.initializers.Constant(0.0))(latent)
+
+    value = tf.keras.Model(inputs=input_list, outputs=value_out, name="value")
+
+    # pseudo_variance network
+    if not shared:
+        pseudo_variance_latent = _build_encoding_sub_model(inputs.shape[1:], None, layer_sizes=layer_sizes,
+                                                 name="pseudo_variance_encoder")(inputs)
+        pseudo_variance_out = tf.keras.layers.Dense(3, kernel_initializer=tf.keras.initializers.Orthogonal(1.0),
+                                          bias_initializer=tf.keras.initializers.Constant(0.0))(pseudo_variance_latent)
+    else:
+        pseudo_variance_out = tf.keras.layers.Dense(3, input_dim=layer_sizes[-1],
+                                          kernel_initializer=tf.keras.initializers.Orthogonal(1.0),
+                                          bias_initializer=tf.keras.initializers.Constant(0.0))(latent)
+
+    pseudo_variance = tf.keras.Model(inputs=input_list, outputs=pseudo_variance_out, name="pseudo_variance")
+
+    return policy, value, tf.keras.Model(inputs=input_list, outputs=[out_policy, pseudo_variance_out, value_out], name="policy_var_value")
 
 def build_rnn_models(env: BaseWrapper,
                      distribution: BasePolicyDistribution,

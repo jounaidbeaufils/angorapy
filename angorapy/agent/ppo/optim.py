@@ -126,7 +126,7 @@ def learn_on_batch_with_var(batch,
         state_batch = {fname: f for fname, f in batch.items() if fname in Sensation.sense_names}
         old_values = batch["value"]
 
-        policy_output, value_output = joint(state_batch, training=True)
+        policy_output, _ ,value_output = joint(state_batch, training=True)
 
         if continuous_control:
             # if action space is continuous, calculate PDF at chosen action value
@@ -163,6 +163,8 @@ def learn_on_batch_with_var(batch,
 
     # calculate the gradient of the joint model based on total loss
     gradients = tape.gradient(total_loss, joint.trainable_variables)
+
+    print(gradients)
 
     for i, gradient in enumerate(gradients):
         tf.debugging.assert_all_finite(gradient, f"Gradient {i} is nan/inf")
