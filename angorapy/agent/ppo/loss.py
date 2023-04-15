@@ -116,6 +116,9 @@ def policy_pseudo_var_loss(pseudo_variance: tf.Tensor,
     tf.debugging.assert_all_finite(pseudo_variance, "pseudo variance is not all finite!")
 
     if is_recurrent:
+        
+        raise NotImplementedError("pseudo_variance not available in recurrent network")
+
         # build and apply a mask over the probabilities (recurrent)
         clipped_masked = tf.where(mask, pseudo_variance, 1)
         return tf.reduce_sum(clipped_masked) / tf.reduce_sum(tf.cast(mask, tf.float32))

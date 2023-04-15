@@ -335,6 +335,9 @@ class VarGatherer(Gatherer):
 
             # if recurrent, at a subsequence breakpoint/episode end stack the n_steps and buffer them
             if is_recurrent and (current_subseq_length == self.subseq_length or done):
+
+                raise NotImplementedError("pseudo_variance not available in recurrent networks") 
+
                 buffer.push_seq_to_buffer(states=states,
                                           actions=actions,
                                           action_probabilities=action_probabilities,
