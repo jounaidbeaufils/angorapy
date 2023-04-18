@@ -111,10 +111,10 @@ def build_var_ffn_models(env: BaseWrapper,
     if not shared:
         pseudo_variance_latent = _build_encoding_sub_model(inputs.shape[1:], None, layer_sizes=layer_sizes,
                                                  name="pseudo_variance_encoder")(inputs)
-        pseudo_variance_out = tf.keras.layers.Dense(3, kernel_initializer=tf.keras.initializers.Orthogonal(1.0),
+        pseudo_variance_out = tf.keras.layers.Dense(2, kernel_initializer=tf.keras.initializers.Orthogonal(1.0),
                                           bias_initializer=tf.keras.initializers.Constant(0.0))(pseudo_variance_latent)
     else:
-        pseudo_variance_out = tf.keras.layers.Dense(3, input_dim=layer_sizes[-1],
+        pseudo_variance_out = tf.keras.layers.Dense(2, input_dim=layer_sizes[-1],
                                           kernel_initializer=tf.keras.initializers.Orthogonal(1.0),
                                           bias_initializer=tf.keras.initializers.Constant(0.0))(latent)
 

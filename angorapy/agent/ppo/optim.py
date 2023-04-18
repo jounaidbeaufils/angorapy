@@ -126,7 +126,7 @@ def learn_on_batch_with_var(batch,
         state_batch = {fname: f for fname, f in batch.items() if fname in Sensation.sense_names}
         old_values = batch["value"]
 
-        policy_output, _ ,value_output = joint(state_batch, training=True)
+        policy_output, pseudo_var_output ,value_output = joint(state_batch, training=True)
 
         if continuous_control:
             # if action space is continuous, calculate PDF at chosen action value
@@ -154,17 +154,19 @@ def learn_on_batch_with_var(batch,
                                      is_recurrent=is_recurrent)
         entropy = loss.entropy_bonus(policy_output=policy_output,
                                      distribution=distribution)
-        pseudo_variance_loss = loss.policy_pseudo_var_loss(pseudo_variance= batch["pseudo_variance"],
-                                                           mask=batch["mask"],
-                                                           is_recurrent=is_recurrent)
+        pseudo_variance_loss = loss.pseudo_var_loss(pseudo_var_predictions=pseudo_var_output,
+                                    old_pseudo_var= None, #clipping not yet implemented
+                                    true_pseudo_var=batch["pseudo_variance"],
+                                    mask= batch["mask"],
+                                    clip = False, #clipping not yet implemented
+                                    clipping_bound= clipping_bound,
+                                    is_recurrent=is_recurrent)
 
         # combine weighted losses
         total_loss = policy_loss + tf.multiply(c_value, value_loss) - tf.multiply(c_entropy, entropy) + tf.multiply(0.001, pseudo_variance_loss)
 
     # calculate the gradient of the joint model based on total loss
     gradients = tape.gradient(total_loss, joint.trainable_variables)
-
-    print(gradients)
 
     for i, gradient in enumerate(gradients):
         tf.debugging.assert_all_finite(gradient, f"Gradient {i} is nan/inf")

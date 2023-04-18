@@ -100,7 +100,7 @@ def entropy_bonus(policy_output: tf.Tensor, distribution) -> tf.Tensor:
     return tf.reduce_mean(distribution.entropy(policy_output))
 
 @tf.function
-def policy_pseudo_var_loss(pseudo_variance: tf.Tensor,
+def pseudo_var_loss_abs(pseudo_variance: tf.Tensor,
                 mask: tf.Tensor,
                 is_recurrent: bool) -> tf.Tensor:
     """pseudo variance as a measurure of reward variability.
@@ -124,3 +124,58 @@ def policy_pseudo_var_loss(pseudo_variance: tf.Tensor,
         return tf.reduce_sum(clipped_masked) / tf.reduce_sum(tf.cast(mask, tf.float32))
     else:
         return tf.reduce_mean(pseudo_variance)
+    
+@tf.function
+def pseudo_var_loss(pseudo_var_predictions: tf.Tensor,
+               old_pseudo_var: tf.Tensor,
+               true_pseudo_var: tf.Tensor,
+               mask: tf.Tensor,
+               clip: bool,
+               clipping_bound: tf.Tensor,
+               is_recurrent: bool) -> tf.Tensor:
+    """Loss of the critic network as squared error between the prediction and the sampled future return. In the
+    recurrent case a mask is calculated based on 0 values in the old_action_prob tensor. This mask is then applied
+    in the mean operation of the loss.
+
+    Args:
+      pseudo_var_predictions (tf.Tensor): variance prediction by the current critic network
+      old_pseudo_var (tf.Tensor): old variance prediction by the old critic network during gathering
+      true_pseudo_var (tf.Tensor): calculated variance in episode
+      clip (object): (Default value = True) value loss can be clipped by same range as policy loss
+
+    Returns:
+      squared error between prediction and return
+    """
+    tf.debugging.assert_all_finite(pseudo_var_predictions, "pseudo_var_predictions is not all finite!")
+    # tf.debugging.assert_all_finite(old_pseudo_var, "old_pseudo_var is not all finite!")
+    tf.debugging.assert_all_finite(true_pseudo_var, "true_pseudo_var is not all finite!")
+
+    # Convert list of tuples to separate lists
+    a_list, b_list = tf.split(true_pseudo_var, num_or_size_splits=2, axis=1)
+
+    # Convert lists to tensors
+    a_tensor = tf.squeeze(a_list)
+    b_tensor = tf.squeeze(b_list)
+
+    # Subtract a_tensor from the first column of tensor and b_tensor from the second column of tensor
+    diff = tf.subtract(pseudo_var_predictions, tf.stack([a_tensor, b_tensor], axis=1))
+
+
+    error = tf.square(diff)
+
+    if clip:
+        raise NotImplementedError("cliping not added yet in recurrent network")  
+        # clips value error to reduce variance
+        clipped_values = old_pseudo_var + tf.clip_by_value(pseudo_var_predictions - old_pseudo_var, -clipping_bound, clipping_bound)
+        clipped_error = tf.square(clipped_values - true_pseudo_var)
+        error = tf.maximum(clipped_error, error)
+
+    if is_recurrent:
+        
+        raise NotImplementedError("pseudo_variance not available in recurrent network")
+
+        # apply mask over the old values
+        error_masked = tf.where(mask, error, 1)  # masking with tf.where because inf * 0 = nan...
+        return (tf.reduce_sum(error_masked) / tf.reduce_sum(tf.cast(mask, tf.float32))) * 0.5
+    else:
+        return tf.reduce_mean(error) * 0.5

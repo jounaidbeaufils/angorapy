@@ -258,7 +258,7 @@ class VarGatherer(Gatherer):
     # define __init__() overide to set default variance stragy
     def __init__(self, worker_id: int, exp_id: int, distribution: BasePolicyDistribution, horizon: int, discount: float, lam: float, subseq_length: int):
         super().__init__(worker_id, exp_id, distribution, horizon, discount, lam, subseq_length)
-        self.var_strategy = variance.absolute
+        self.var_strategy = variance.future_reward_variance
 
     # define assign_strategy() to set desired strategy
     def assign_var_strategy(self, strategy):
@@ -371,7 +371,7 @@ class VarGatherer(Gatherer):
                 else:
                     advantages.append(episode_advantages)
                     # (Jounaid)
-                    pseudo_variances.append(episode_variances)
+                    pseudo_variances.extend(episode_variances)
 
                 # reset environment to receive next episodes initial state
                 state = env.reset()
@@ -407,7 +407,7 @@ class VarGatherer(Gatherer):
             else:
                 advantages.append(leftover_advantages)
                 # (Jounaid)
-                pseudo_variances.append(leftover_pseudo_variance)
+                pseudo_variances.extend(leftover_pseudo_variance)
 
         # if not recurrent, fill the buffer with everything we gathered
         if not is_recurrent:
@@ -417,7 +417,7 @@ class VarGatherer(Gatherer):
             advantages = np.hstack(advantages).astype("float32")
             returns = advantages + values[:-1]
             # (Jounaid)
-            pseudo_variances = np.hstack(pseudo_variances).astype("float32")
+            pseudo_variances = np.array(pseudo_variances).astype("float32")
 
             buffer.fill(states,
                         np.array(actions, dtype="float32" if is_continuous else "int32"),
