@@ -290,6 +290,9 @@ class VarGatherer(Gatherer):
 
         # reset states of potentially recurrent net
         if is_recurrent:
+
+            raise NotImplementedError("pseudo_variance not available in recurrent networks")
+
             joint.reset_states()
 
         # buffer storing the experience and stats
@@ -314,7 +317,7 @@ class VarGatherer(Gatherer):
             prepared_state = state.with_leading_dims(time=is_recurrent).dict_as_tf()
             policy_out = flatten(joint(prepared_state))
 
-            predicted_distribution_parameters, value = policy_out[:-2], policy_out[-1]
+            predicted_distribution_parameters, future_variance ,value = policy_out[:-2], policy_out[-2], policy_out[-1]
 
             # from the action distribution sample an action and remember both the action and its probability
             action, action_probability = self.select_action(predicted_distribution_parameters)
@@ -335,9 +338,6 @@ class VarGatherer(Gatherer):
 
             # if recurrent, at a subsequence breakpoint/episode end stack the n_steps and buffer them
             if is_recurrent and (current_subseq_length == self.subseq_length or done):
-
-                raise NotImplementedError("pseudo_variance not available in recurrent networks") 
-
                 buffer.push_seq_to_buffer(states=states,
                                           actions=actions,
                                           action_probabilities=action_probabilities,
@@ -361,6 +361,8 @@ class VarGatherer(Gatherer):
 
                 # calculate pseudo variance for the finished episode (Jounaid)
                 episode_variances = self.var_strategy(rewards[-episode_steps:])
+
+                #episode_pooled_var = variance.pooled_variance(episode_variances, future_variance)
 
                 if is_recurrent:
                     # skip as many steps as are missing to fill the subsequence, then push adv ant ret to buffer

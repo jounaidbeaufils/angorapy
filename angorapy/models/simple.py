@@ -118,7 +118,7 @@ def build_var_ffn_models(env: BaseWrapper,
                                           kernel_initializer=tf.keras.initializers.Orthogonal(1.0),
                                           bias_initializer=tf.keras.initializers.Constant(0.0))(latent)
 
-    pseudo_variance = tf.keras.Model(inputs=input_list, outputs=pseudo_variance_out, name="pseudo_variance")
+    #pseudo_variance = tf.keras.Model(inputs=input_list, outputs=pseudo_variance_out, name="pseudo_variance")
 
     return policy, value, tf.keras.Model(inputs=input_list, outputs=[out_policy, pseudo_variance_out, value_out], name="policy_var_value")
 
@@ -259,9 +259,13 @@ def build_wider_models(env: BaseWrapper,
 if __name__ == '__main__':
     os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
-    cont_env = gym.make("FetchReachDense-v1")
+    cont_env = gym.make("LunarLanderContinuous-v2")
     discrete_env = gym.make("LunarLander-v2")
     multi_discrete_env = gym.make("ManipulateBlockDiscreteRelative-v0")
+
+    model = build_var_ffn_models(cont_env, BetaPolicyDistribution(cont_env), False)
+    print(f"Simple model has {model[0].count_params()} parameters.")
+    plot_model(model[2], show_shapes=True, to_file="simple.png", expand_nested=True)
 
     model = build_simple_models(cont_env, RBetaPolicyDistribution(cont_env), False, 1, 1, "gru")
     print(f"Simple model has {model[0].count_params()} parameters.")
