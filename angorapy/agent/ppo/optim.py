@@ -155,10 +155,10 @@ def learn_on_batch_with_var(batch,
         entropy = loss.entropy_bonus(policy_output=policy_output,
                                      distribution=distribution)
         pseudo_variance_loss = loss.pseudo_var_loss(pseudo_var_predictions=pseudo_var_output,
-                                    old_pseudo_var= None, #clipping not yet implemented
+                                    old_pseudo_var= batch["variance_preds"],
                                     true_pseudo_var=batch["pseudo_variance"],
                                     mask= batch["mask"],
-                                    clip = False, #clipping not yet implemented
+                                    clip = clip_values,
                                     clipping_bound= clipping_bound,
                                     is_recurrent=is_recurrent)
 

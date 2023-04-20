@@ -147,7 +147,7 @@ def pseudo_var_loss(pseudo_var_predictions: tf.Tensor,
       squared error between prediction and return
     """
     tf.debugging.assert_all_finite(pseudo_var_predictions, "pseudo_var_predictions is not all finite!")
-    # tf.debugging.assert_all_finite(old_pseudo_var, "old_pseudo_var is not all finite!")
+    tf.debugging.assert_all_finite(old_pseudo_var, "old_pseudo_var is not all finite!")
     tf.debugging.assert_all_finite(true_pseudo_var, "true_pseudo_var is not all finite!")
 
     # Convert list of tuples to separate lists
@@ -164,7 +164,6 @@ def pseudo_var_loss(pseudo_var_predictions: tf.Tensor,
     error = tf.square(diff)
 
     if clip:
-        raise NotImplementedError("cliping not added yet in recurrent network")  
         # clips value error to reduce variance
         clipped_values = old_pseudo_var + tf.clip_by_value(pseudo_var_predictions - old_pseudo_var, -clipping_bound, clipping_bound)
         clipped_error = tf.square(clipped_values - true_pseudo_var)
