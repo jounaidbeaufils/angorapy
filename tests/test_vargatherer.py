@@ -11,12 +11,12 @@ try:
 except:
     is_root = True
 
-from angorapy.agent.ppo_agent import PPOAgent, VarPPOAgent
+from angorapy.agent.ppo_agent import VarPPOAgent
 from angorapy.common.policies import BetaPolicyDistribution
 from angorapy.common.transformers import RewardNormalizationTransformer, StateNormalizationTransformer
 from angorapy.common.wrappers import make_env
 
-from angorapy.models import get_model_builder, build_ffn_models
+from angorapy.models import build_ffn_models
 from angorapy.models.simple import build_var_ffn_models
 
 from angorapy.agent.gather import VarGatherer

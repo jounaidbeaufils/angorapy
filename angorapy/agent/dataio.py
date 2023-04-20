@@ -106,6 +106,7 @@ def make_dataset_and_stats_with_var(buffer: VarExperienceBuffer) -> Tuple[tf.dat
         "advantage": buffer.advantages,
         "pseudo_variance": buffer.pseudo_variance,
         "value": buffer.values,
+        "variance_preds": buffer.variance_preds,
         "done": buffer.dones,
         "mask": buffer.mask
     }
@@ -155,6 +156,7 @@ def read_dataset_from_storage(dtype_actions: tf.dtypes.DType, id_prefix: Union[s
         "advantage": tf.io.FixedLenFeature([], tf.string),
         "pseudo_variance": tf.io.FixedLenFeature([], tf.string),
         "value": tf.io.FixedLenFeature([], tf.string),
+        "variance_preds": tf.io.FixedLenFeature([], tf.string),
         "done": tf.io.FixedLenFeature([], tf.string),
         "mask": tf.io.FixedLenFeature([], tf.string),
 
@@ -172,6 +174,7 @@ def read_dataset_from_storage(dtype_actions: tf.dtypes.DType, id_prefix: Union[s
         parsed["advantage"] = tf.io.parse_tensor(parsed["advantage"], out_type=tf.float32)
         parsed["pseudo_variance"] = tf.io.parse_tensor(parsed["pseudo_variance"], out_type=tf.float32)
         parsed["value"] = tf.io.parse_tensor(parsed["value"], out_type=tf.float32)
+        parsed["variance_preds"] = tf.io.parse_tensor(parsed["variance_preds"], out_type=tf.float32)
         parsed["done"] = tf.io.parse_tensor(parsed["done"], out_type=tf.bool)
         parsed["mask"] = tf.io.parse_tensor(parsed["mask"], out_type=tf.bool)
 

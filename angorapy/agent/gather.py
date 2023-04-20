@@ -305,7 +305,7 @@ class VarGatherer(Gatherer):
 
         # go for it
         t, current_episode_return, episode_steps, current_subseq_length = 0, 0, 1, 0
-        states, rewards, actions, action_probabilities, values, advantages, pseudo_variances, dones = [], [], [], [], [], [], [], []        
+        states, rewards, actions, action_probabilities, values, variance_preds, advantages, pseudo_variances, dones = [], [], [], [], [], [], [], [], []        
         episode_endpoints = []
         achieved_goals = []
         state = env.reset()
@@ -317,13 +317,14 @@ class VarGatherer(Gatherer):
             prepared_state = state.with_leading_dims(time=is_recurrent).dict_as_tf()
             policy_out = flatten(joint(prepared_state))
 
-            predicted_distribution_parameters, future_variance ,value = policy_out[:-2], policy_out[-2], policy_out[-1]
+            predicted_distribution_parameters, variance_pred ,value = policy_out[:-2], policy_out[-2], policy_out[-1]
 
             # from the action distribution sample an action and remember both the action and its probability
             action, action_probability = self.select_action(predicted_distribution_parameters)
 
             states.append(state)
             values.append(np.squeeze(value))
+            variance_preds.extend(variance_pred)
             actions.append(action)
             action_probabilities.append(action_probability)  # should probably ensure that no probability is ever 0
 
@@ -362,7 +363,7 @@ class VarGatherer(Gatherer):
                 # calculate pseudo variance for the finished episode (Jounaid)
                 episode_variances = self.var_strategy(rewards[-episode_steps:])
 
-                #episode_pooled_var = variance.pooled_variance(episode_variances, future_variance)
+                #episode_pooled_var = variance.pooled_variance(episode_variances, variance_preds[-episode_steps:])
 
                 if is_recurrent:
                     # skip as many steps as are missing to fill the subsequence, then push adv ant ret to buffer
@@ -393,6 +394,7 @@ class VarGatherer(Gatherer):
 
         # get last non-visited state value to incorporate it into the advantage estimation of last visited state
         values.append(np.squeeze(joint(add_state_dims(state, dims=2 if is_recurrent else 1).dict())[-1]))
+        variance_preds.extend(joint(add_state_dims(state, dims=2 if is_recurrent else 1).dict())[-2])
 
         # if there was at least one step in the environment after the last episode end, calculate advantages for them
         if episode_steps > 1:
@@ -413,6 +415,9 @@ class VarGatherer(Gatherer):
         if not is_recurrent:
             values = np.array(values, dtype="float32")
 
+            # (Jounaid)
+            variance_preds = np.array(variance_preds, dtype="float32")
+
             # write to the buffer
             advantages = np.hstack(advantages).astype("float32")
             returns = advantages + values[:-1]
@@ -427,6 +432,8 @@ class VarGatherer(Gatherer):
                         pseudo_variances,
                         returns,
                         values[:-1],
+                        # (Jounaid)
+                        variance_preds[:-1],
                         np.array(dones),
                         np.array(achieved_goals))
 
@@ -437,7 +444,7 @@ class VarGatherer(Gatherer):
         dataset, stats = make_dataset_and_stats_with_var(buffer)
         with tf.io.TFRecordWriter(f"{STORAGE_DIR}/{self.exp_id}_data_{collector_id}.tfrecord") as file_writer:
             feature_names = ([sense for sense in Sensation.sense_names if sense in observation]
-                             + ["action", "action_prob", "return", "advantage", "pseudo_variance","value", "done", "mask"])
+                             + ["action", "action_prob", "return", "advantage", "pseudo_variance","value", "variance_preds", "done", "mask"])
 
             for batch in dataset:
                 inputs = [batch[f] for f in feature_names]

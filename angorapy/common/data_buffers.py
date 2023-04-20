@@ -183,9 +183,10 @@ class VarExperienceBuffer(ExperienceBuffer):
         # data buffers
         self.pseudo_variance = np.empty((capacity,), dtype=np.float32)
 
-    def fill(self, s: List[Sensation], a: arr, ap: arr, adv: arr, var: arr, ret: arr, v: arr, dones: arr, achieved_goals: arr):
-        assert np.all(np.array(list(map(len, [s, a, ap, ret, adv, var, v]))) == len(s)), f"Inconsistent input sizes: {np.array(list(map(len, [s, a, ap, ret, adv, var, v])))}"
+    def fill(self, s: List[Sensation], a: arr, ap: arr, adv: arr, var: arr, ret: arr, v: arr, varp: arr, dones: arr, achieved_goals: arr):
+        assert np.all(np.array(list(map(len, [s, a, ap, ret, adv, var, v, varp]))) == len(s)), f"Inconsistent input sizes: {np.array(list(map(len, [s, a, ap, ret, adv, var, v, varp])))}"
 
         super().fill(s, a, ap, adv, ret, v, dones, achieved_goals)
 
         self.pseudo_variance = var
+        self.variance_preds = varp
