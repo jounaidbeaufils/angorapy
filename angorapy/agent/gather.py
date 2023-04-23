@@ -363,7 +363,7 @@ class VarGatherer(Gatherer):
                 # calculate pseudo variance for the finished episode (Jounaid)
                 calculated_variance = variance.future_reward_variance(rewards[-episode_steps:])
                 episode_variances = variance.estimate_episode_variance(calculated_variance,
-                                                                 values[-episode_steps:] + [0],
+                                                                 variance_preds[-episode_steps:] + [(0, 1)],
                                                                  self.discount, self.lam)
 
                 #episode_pooled_var = variance.pooled_variance(episode_variances, variance_preds[-episode_steps:])
