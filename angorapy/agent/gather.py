@@ -361,7 +361,10 @@ class VarGatherer(Gatherer):
                 episode_returns = episode_advantages + values[-episode_steps:]
 
                 # calculate pseudo variance for the finished episode (Jounaid)
-                episode_variances = self.var_strategy(rewards[-episode_steps:])
+                calculated_variance = variance.future_reward_variance(rewards[-episode_steps:])
+                episode_variances = variance.estimate_episode_variance(calculated_variance,
+                                                                 values[-episode_steps:] + [0],
+                                                                 self.discount, self.lam)
 
                 #episode_pooled_var = variance.pooled_variance(episode_variances, variance_preds[-episode_steps:])
 

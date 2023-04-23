@@ -23,25 +23,21 @@ def future_reward_variance(rewards):
 
     return list(zip(variance,n_list))
 
-# untested function, currently unused. 
 def estimate_episode_variance(rewards, values, discount, lam):
     """estimate episode variance in the style of estimate_episode_advantages()"""
-    #gets pooled variance. equivalent to deltas
-    arrays = np.array(rewards, values[1:], values[:-1])
+    array1_np = np.array(rewards)
+    array2_np = np.array(values[:-1])
+    array3_np = np.array(values[1:])
 
-    # Calculate n_total for each column
-    n_total = np.sum(arrays[:, :, 1], axis=0)
+    variances = np.vstack((array1_np[:, 0], array2_np[:, 0], array3_np[:, 0]))
+    sample_sizes = np.vstack((array1_np[:, 1], array2_np[:, 1], array3_np[:, 1]))
 
-    # Calculate variances for each column
-    variances = arrays[:, :, 0] * (arrays[:, :, 1] - 1)
+    pooled_variances = (np.sum((sample_sizes - 1) * variances, axis=0) / (np.sum(sample_sizes, axis=0) - 3)).reshape(-1, 1)
+    total_sample_sizes = np.sum(sample_sizes, axis=0).reshape(-1, 1)
 
-    # Sum variances for each column
-    sum_variances = np.sum(variances, axis=0)
-
-    # Calculate pooled variances
-    pooled_var = sum_variances / (n_total - len(arrays))
-
-    # Combine pooled_var and n_total into a single array
-    discounted_var = lfilter([1], [1, float(-(discount * lam))], pooled_var[::-1], axis=0)[::-1].astype(NP_FLOAT_PREC)
+    discounted_var = lfilter([1], [1, float(-(discount * lam))], pooled_variances[::-1], axis=0)[::-1].astype(NP_FLOAT_PREC)
     
-    return np.vstack((discounted_var, n_total))
+    # Combine pooled_var and n_total into a single array
+    result = np.hstack((discounted_var, total_sample_sizes))
+
+    return [tuple(row) for row in result]
