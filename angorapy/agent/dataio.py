@@ -154,6 +154,63 @@ def read_dataset_from_storage(dtype_actions: tf.dtypes.DType, id_prefix: Union[s
         "action_prob": tf.io.FixedLenFeature([], tf.string),
         "return": tf.io.FixedLenFeature([], tf.string),
         "advantage": tf.io.FixedLenFeature([], tf.string),
+        "value": tf.io.FixedLenFeature([], tf.string),
+        "done": tf.io.FixedLenFeature([], tf.string),
+        "mask": tf.io.FixedLenFeature([], tf.string),
+
+        # STATES
+        **{sense: tf.io.FixedLenFeature([], tf.string) for sense in responsive_senses}
+    }
+
+    def _parse_function(example_proto):
+        # Parse the input `tf.Example` proto using the dictionary above.
+        parsed = tf.io.parse_single_example(example_proto, feature_description)
+
+        parsed["action"] = tf.io.parse_tensor(parsed["action"], out_type=dtype_actions)
+        parsed["action_prob"] = tf.io.parse_tensor(parsed["action_prob"], out_type=tf.float32)
+        parsed["return"] = tf.io.parse_tensor(parsed["return"], out_type=tf.float32)
+        parsed["advantage"] = tf.io.parse_tensor(parsed["advantage"], out_type=tf.float32)
+        parsed["value"] = tf.io.parse_tensor(parsed["value"], out_type=tf.float32)
+        parsed["done"] = tf.io.parse_tensor(parsed["done"], out_type=tf.bool)
+        parsed["mask"] = tf.io.parse_tensor(parsed["mask"], out_type=tf.bool)
+
+        for sense in responsive_senses:
+            parsed[sense] = tf.io.parse_tensor(parsed[sense], out_type=tf.float32)
+
+        return parsed
+
+    worker_id_regex = "[0-9]*"
+    if worker_ids is not None:
+        worker_id_regex = "(" + "|".join(map(str, worker_ids)) + ")"
+
+    files = [os.path.join(STORAGE_DIR, name) for name in os.listdir(STORAGE_DIR) if
+             re.match(f"{id_prefix}_data_{worker_id_regex}\.tfrecord", name)]
+
+    random.shuffle(files) if shuffle else None
+
+    serialized_dataset = tf.data.TFRecordDataset(files)
+    serialized_dataset = serialized_dataset.map(_parse_function)
+
+    return serialized_dataset
+
+def read_dataset_from_storage_with_var(dtype_actions: tf.dtypes.DType, id_prefix: Union[str, int], responsive_senses: List[str],
+                              shuffle: bool = True, worker_ids: List = None):
+    """Read all files in storage into a tf record dataset without actually loading everything into memory.
+
+    Args:
+        dtype_actions:      datatype of the actions
+        id_prefix:          prefix (usually agent id) by which to filter available experience files
+        responsive_senses:  list of senses (string represented, in ["proprioception", "vision", "somatosensation",
+                            "goal"]) that the agent utilizes
+        shuffle:            whether or not to shuffle the datafiles
+    """
+    assert all(r in Sensation.sense_names for r in responsive_senses)
+
+    feature_description = {
+        "action": tf.io.FixedLenFeature([], tf.string),
+        "action_prob": tf.io.FixedLenFeature([], tf.string),
+        "return": tf.io.FixedLenFeature([], tf.string),
+        "advantage": tf.io.FixedLenFeature([], tf.string),
         "pseudo_variance": tf.io.FixedLenFeature([], tf.string),
         "value": tf.io.FixedLenFeature([], tf.string),
         "variance_preds": tf.io.FixedLenFeature([], tf.string),

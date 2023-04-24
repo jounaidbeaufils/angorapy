@@ -21,7 +21,7 @@ from mpi4py import MPI
 from psutil import NoSuchProcess
 
 from angorapy import models
-from angorapy.agent.dataio import read_dataset_from_storage
+from angorapy.agent.dataio import read_dataset_from_storage, read_dataset_from_storage_with_var
 from angorapy.agent.gather import Gatherer, evaluate, EpsilonGreedyGatherer
 from angorapy.agent.ppo.optim import learn_on_batch, learn_on_batch_with_var
 from angorapy.common import policies, const
@@ -1081,3 +1081,282 @@ class VarPPOAgent(PPOAgent):
         tf.keras.backend.clear_session()
         tf.compat.v1.reset_default_graph()
         gc.collect()
+
+    def drill(self,
+              n: int,
+              epochs: int,
+              batch_size: int,
+              monitor: "Monitor"=None,
+              save_every: int = 0,
+              separate_eval: bool = False,
+              stop_early: bool = False,
+              radical_evaluation=False) -> "PPOAgent":
+        """Start a training loop of the agent.
+        
+        Runs **n** cycles of experience gathering and optimization based on the gathered experience.
+
+        Args:
+            n (int): the number of experience-optimization cycles that shall be run
+            epochs (int): the number of epochs for which the model is optimized on the same experience data
+            batch_size (int): batch size for the optimization
+            monitor: story telling object that creates visualizations of the training process on the fly (Default
+                value = None)
+            save_every (int): for any int x > 0 save the policy every x iterations, if x = 0 (default) do not save
+            separate_eval (bool): if false (default), use episodes from gathering for statistics, if true, evaluate 10
+                additional episodes.
+            stop_early (bool): if true, stop the drill early if at least the previous 5 cycles achieved a performance
+                above the environments threshold
+
+
+        Returns:
+            self, for chaining
+        """
+
+        # start monitor
+        if is_root and monitor is not None:
+            monitor.make_metadata(additional_hps={
+                "epochs_per_cycle": epochs,
+                "batch_size": batch_size,
+            })
+
+        # determine the number of independent repeated gatherings required on this worker
+        worker_base, worker_extra = divmod(self.n_workers, MPI.COMM_WORLD.size)
+        worker_split = [worker_base + (r < worker_extra) for r in range(MPI.COMM_WORLD.size)]
+        worker_collection_ids = list(range(self.n_workers))[
+                                sum(worker_split[:mpi_comm.rank]):sum(worker_split[:mpi_comm.rank + 1])]
+
+        # determine the split of worker outputs over optimizers
+        optimizer_base, optimizer_extra = divmod(self.n_workers, n_optimizers)
+        optimizer_split = [optimizer_base + (r < optimizer_extra) for r in range(n_optimizers)]
+        optimizer_collection_ids = list(range(self.n_workers))[
+                                   sum(optimizer_split[:self.optimizer.comm.rank]):sum(optimizer_split[:self.optimizer.comm.rank + 1])]
+
+        list_of_worker_collection_id_lists = mpi_comm.gather(worker_collection_ids, root=0)
+        list_of_optimizer_collection_id_lists = self.optimizer.comm.gather(optimizer_collection_ids, root=0)
+
+        if is_root:
+            print(
+                f"\n\nDrill started using {MPI.COMM_WORLD.size} processes for {self.n_workers} workers of which "
+                f"{n_optimizers} are optimizers."
+                f" Worker distribution: {[worker_base + (r < worker_extra) for r in range(MPI.COMM_WORLD.size)]}.\n"
+                f"IDs over Workers: {list_of_worker_collection_id_lists}\n"
+                f"IDs over Optimizers: {list_of_optimizer_collection_id_lists}")
+
+        if self.is_recurrent:
+            assert batch_size % self.tbptt_length == 0, f"Batch size (the number of transitions per update)" \
+                                                        f" must be a multiple of the sequence length "
+
+            n_chunks_per_trajectory = self.horizon // self.tbptt_length
+            n_chunks_per_batch = batch_size // self.tbptt_length
+            n_chunks_per_batch_per_process = n_chunks_per_batch // n_optimizers
+            n_trajectories_per_process = self.n_workers // n_optimizers
+
+            n_trajectories_per_batch_per_process, n_chunks_per_trajectory_per_batch_per_process = find_optimal_tile_shape(
+                (n_trajectories_per_process, n_chunks_per_trajectory),
+                n_chunks_per_batch_per_process
+            )
+
+            n_trajectories_per_batch = n_trajectories_per_batch_per_process * n_optimizers
+            n_chunks_per_trajectory_per_batch = n_chunks_per_trajectory_per_batch_per_process
+
+            if is_root:
+                print(f"\nThe policy is recurrent and the batch size is interpreted as the number of transitions "
+                      f"per policy update. Given the batch size of {batch_size} this results in: \n"
+                      f"\t{n_chunks_per_batch} chunks per update and {(self.n_workers * self.horizon) // batch_size} updates per epoch\n"
+                      f"\tBatch tilings of "
+                      f"{n_trajectories_per_batch_per_process, n_chunks_per_trajectory_per_batch_per_process} per process "
+                      f"and {n_trajectories_per_batch, n_chunks_per_trajectory_per_batch} in total.\n\n")
+
+            batch_size = n_trajectories_per_batch_per_process
+            effective_batch_size = (n_trajectories_per_batch_per_process, n_chunks_per_trajectory_per_batch_per_process)
+
+        else:
+            assert self.horizon * self.n_workers >= batch_size, "Batch Size is larger than the number of transitions."
+            batch_size = batch_size // n_optimizers
+            effective_batch_size = batch_size
+
+        # rebuild model with desired batch size
+        joint_weights = self.joint.get_weights()
+        self.policy, self.value, self.joint = self.build_models(
+            weights=joint_weights,
+            batch_size=batch_size,
+            sequence_length=self.tbptt_length)
+        _, _, actor_joint = self.build_models(joint_weights, 1, 1)
+
+        # reset optimizer to not be confused by the newly build models
+        # todo maybe its better to maintain a class attribute with optimizer weights and always write it in here
+        optimizer_weights = self.optimizer.get_weights()
+        if len(optimizer_weights) > 0:
+            self.optimizer = MpiAdam(self.optimizer.comm,
+                                     self.optimizer.learning_rate,
+                                     self.optimizer.epsilon)
+            self.optimizer.apply_gradients(zip([tf.zeros_like(v) for v in self.joint.trainable_variables],
+                                               self.joint.trainable_variables))
+            self.optimizer.set_weights(optimizer_weights)
+
+        actor = self._make_actor(
+            horizon=self.horizon,
+            discount=self.discount,
+            lam=self.lam,
+            subseq_length=self.tbptt_length
+        )
+
+        cycle_start = None
+        full_drill_start_time = time.time()
+        for self.iteration in range(self.iteration, n):
+            mpi_flat_print(f"Gathering cycle {self.iteration}...")
+
+            time_dict = OrderedDict()
+            subprocess_start = time.time()
+
+            # distribute parameters from rank 0 to all goal ranks
+            joint_weights = mpi_comm.bcast(joint_weights, root=0)
+            self.joint.set_weights(joint_weights)
+            actor_joint.set_weights(joint_weights)
+
+            # run simulations in parallel
+            worker_stats = []
+
+            for i in worker_collection_ids:
+                stats = actor.collect(actor_joint, self.env, collector_id=i)
+                worker_stats.append(stats)
+
+            # merge gatherings from all workers
+            stats = mpi_condense_stats(worker_stats)
+            stats = mpi_comm.bcast(stats, root=0)
+
+            # sync the environments to share statistics for transformers etc.
+            self.env.mpi_sync()
+
+            time_dict["gathering"] = time.time() - subprocess_start
+            subprocess_start = time.time()
+
+            # make seperate evaluation if necessary and wanted
+            stats_with_evaluation = stats
+            if separate_eval:
+                if radical_evaluation or stats.numb_completed_episodes < MIN_STAT_EPS:
+                    mpi_flat_print("Evaluating...")
+                    n_evaluations = MIN_STAT_EPS if radical_evaluation else MIN_STAT_EPS - stats.numb_completed_episodes
+                    evaluation_stats, _ = self.evaluate(n_evaluations)
+
+                    if radical_evaluation:
+                        stats_with_evaluation = evaluation_stats
+                    else:
+                        stats_with_evaluation = mpi_condense_stats([stats, evaluation_stats])
+            elif MPI.COMM_WORLD.rank == 0 and stats.numb_completed_episodes == 0:
+                print("WARNING: You are using a horizon that caused this cycle to not finish a single episode. "
+                      "Consider activating separate evaluation in drill() to get meaningful statistics.")
+
+            # RECORD STATS, SAVE MODEL AND REPORT
+            if is_root:
+                self.record_wrapper_stats()
+                self.record_stats(stats_with_evaluation)
+
+                time_dict["evaluating"] = time.time() - subprocess_start
+
+                # save if best
+                last_score = self.cycle_reward_history[-1]
+                if last_score is not None and last_score == ignore_none(max, self.cycle_reward_history):
+                    self.save_agent_state(name="best")
+
+                if cycle_start is not None:
+                    self.cycle_timings.append(round(time.time() - cycle_start, 2))
+
+                used_memory = 0
+                for pid in psutil.pids():
+                    try:
+                        p = psutil.Process(pid)
+                        if "python" in p.name():
+                            used_memory += p.memory_info()[0]
+                    except NoSuchProcess:
+                        pass
+
+                used_gpu_memory = 0
+                if len(gpus) > 0:
+                    nvidia_smi.nvmlInit()
+                    nvidia_handle = nvidia_smi.nvmlDeviceGetHandleByIndex(0)
+                    procs = nvidia_smi.nvmlDeviceGetComputeRunningProcesses(nvidia_handle)
+                    used_gpu_memory = 0
+                    for p in procs:
+                        try:
+                            if "python" in psutil.Process(p.pid).name() and p.usedGpuMemory is not None:
+                                used_gpu_memory += p.usedGpuMemory
+                        except NoSuchProcess:
+                            pass
+
+                self.used_memory.append(round(used_memory / 1e9, 2))
+                self.used_gpu_memory.append(round(used_gpu_memory / 1e9, 2))
+                self.report(total_iterations=n)
+                cycle_start = time.time()
+
+            # EARLY STOPPING  TODO check how this goes with MPI
+            if self.env.spec.reward_threshold is not None and stop_early:
+                if np.all(np.greater_equal(self.cycle_reward_history[-5:], self.env.spec.reward_threshold)):
+                    print("\rAll catch a breath, we stop the drill early due to the formidable result!")
+                    break
+
+            # OPTIMIZATION PHASE
+            if is_optimization_process:
+                subprocess_start = time.time()
+
+                mpi_flat_print("Optimizing...")
+                dataset = read_dataset_from_storage_with_var(dtype_actions=tf.float32 if self.continuous_control else tf.int32,
+                                                    id_prefix=self.agent_id, worker_ids=optimizer_collection_ids,
+                                                    responsive_senses=self.policy.input_names)
+                self.optimize(dataset, epochs, effective_batch_size)
+
+                time_dict["optimizing"] = time.time() - subprocess_start
+
+                # FINALIZE
+                if is_root:
+                    mpi_flat_print("Finalizing...")
+                    self.total_frames_seen += stats.numb_processed_frames
+                    self.total_episodes_seen += stats.numb_completed_episodes
+                    if hasattr(self.env, "dt"):
+                        self.years_of_experience += (stats.numb_processed_frames * self.env.dt / 3.154e+7)
+                    else:
+                        self.years_of_experience = None
+
+                    # update monitor logs
+                    if monitor is not None:
+                        if monitor.gif_every != 0 and (self.iteration + 1) % monitor.gif_every == 0:
+                            print("Creating Episode GIFs for current state of policy...")
+                            monitor.create_episode_gif(n=1)
+
+                        if monitor.frequency != 0 and (self.iteration + 1) % monitor.frequency == 0:
+                            monitor.update()
+
+                    # save the current state of the agent
+                    if save_every != 0 and self.iteration != 0 and (self.iteration + 1) % save_every == 0:
+                        # every x iterations
+                        self.save_agent_state()
+
+                    # and (overwrite) the latest version
+                    self.save_agent_state("last")
+
+                    # calculate processing speed in fps
+                    self.current_fps = stats.numb_processed_frames / (
+                        sum([v for v in time_dict.values() if v is not None]))
+                    self.gathering_fps = (stats.numb_processed_frames // min(self.n_workers, MPI.COMM_WORLD.size)) / (
+                        time_dict["gathering"])
+                    self.optimization_fps = (stats.numb_processed_frames * epochs) / (time_dict["optimizing"])
+                    self.time_dicts.append(time_dict)
+
+                    self.optimization_timings.append(time_dict["optimizing"])
+                    self.gathering_timings.append(time_dict["gathering"])
+
+                joint_weights = self.joint.get_weights()
+
+            gc.collect()
+            tf.compat.v1.reset_default_graph()
+            tf.keras.backend.clear_session()
+
+        # after training rebuild the network so that it is available to the agent
+        self.policy, self.value, self.joint = self.build_models(
+            weights=joint_weights, batch_size=batch_size, sequence_length=self.tbptt_length
+        )
+
+        if is_root:
+            print(f"Drill finished after {round(time.time() - full_drill_start_time, 2)}serialization.")
+
+        return self
