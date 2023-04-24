@@ -1,4 +1,4 @@
-""" Test Script to run VarPPO"""
+"""Script to run PPO and VarPPO, store data and compare"""
 import os
 
 from angorapy.analysis.investigation import Investigator
@@ -11,7 +11,7 @@ try:
 except:
     is_root = True
 
-from angorapy.agent.ppo_agent import VarPPOAgent
+from angorapy.agent.ppo_agent import VarPPOAgent, PPOAgent
 from angorapy.common.policies import BetaPolicyDistribution
 from angorapy.common.transformers import RewardNormalizationTransformer, StateNormalizationTransformer
 from angorapy.common.wrappers import make_env
@@ -29,24 +29,40 @@ env = make_env("LunarLanderContinuous-v2", reward_config=None, transformers=wrap
 # make policy distribution
 distribution = BetaPolicyDistribution(env)
 
-# the agent needs to create the model itself, so we build a method that builds a model
-build_models = build_var_ffn_models
+horizon=1024
+workers=1
 
 # given the model builder and the environment we can create an agent
-agent = VarPPOAgent(build_models, env, horizon=1024, workers=1, distribution=distribution)
+var_agent = VarPPOAgent(build_var_ffn_models, env, horizon=horizon, workers=workers, distribution=distribution)
 
 # let's check the agents ID, so we can find its saved states after training
-print(f"My Agent's ID: {agent.agent_id}")
+print(f"My Agent's ID: {var_agent.agent_id}")
 
 # set vargatherer
-agent.assign_gatherer(VarGatherer)
+var_agent.assign_gatherer(VarGatherer)
 
 # ... and then train that agent for n cycles
-agent.drill(n=10, epochs=3, batch_size=64)
+n=10
+epochs=3
+batch_size=64
+
+var_agent.drill(n=n, epochs=epochs, batch_size=batch_size)
 
 if is_root:
     # after training, we can save the agent for analysis or the like
-    agent.save_agent_state()
+    var_agent.save_agent_state()
 
     # render one episode after training
-    Investigator.from_agent(agent).render_episode(agent.env, act_confidently=True)
+    Investigator.from_agent(var_agent).render_episode(var_agent.env, act_confidently=True)
+
+
+#repeat original agent 
+ori_agent = PPOAgent(build_ffn_models, env, horizon=1024, workers=1, distribution=distribution)
+print(f"My Agent's ID: {var_agent.agent_id}")
+ori_agent.drill(n=n, epochs=epochs, batch_size=batch_size)
+if is_root:
+    # after training, we can save the agent for analysis or the like
+    ori_agent.save_agent_state()
+
+    # render one episode after training
+    Investigator.from_agent(ori_agent).render_episode(ori_agent.env, act_confidently=True)
