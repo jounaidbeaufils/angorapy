@@ -21,48 +21,43 @@ from angorapy.models.simple import build_var_ffn_models
 
 from angorapy.agent.gather import VarGatherer
 
+import panda_gym
+
 # For most environments, PPO needs to normalize states and rewards; to add this functionality we wrap the environment
 # with transformers fulfilling this task. You can also add your own custom transformers this way.
 wrappers = [StateNormalizationTransformer, RewardNormalizationTransformer]
-env = make_env("LunarLanderContinuous-v2", reward_config=None, transformers=wrappers)
+env = make_env('PandaReachDense-v2', reward_config=None, transformers=wrappers)
 
 # make policy distribution
 distribution = BetaPolicyDistribution(env)
 
+# set common variables
 horizon=1024
 workers=1
-
-# given the model builder and the environment we can create an agent
-var_agent = VarPPOAgent(build_var_ffn_models, env, horizon=horizon, workers=workers, distribution=distribution)
-
-# let's check the agents ID, so we can find its saved states after training
-print(f"My Agent's ID: {var_agent.agent_id}")
-
-# set vargatherer
-var_agent.assign_gatherer(VarGatherer)
-
-# ... and then train that agent for n cycles
-n=10
+n=5
 epochs=3
 batch_size=64
 
+# build VarPPO
+var_agent = VarPPOAgent(build_var_ffn_models, env, horizon=horizon, workers=workers, distribution=distribution)
+print(f"My Agent's ID: {var_agent.agent_id}")
+var_agent.assign_gatherer(VarGatherer)
+
+# train VarPPO
 var_agent.drill(n=n, epochs=epochs, batch_size=batch_size)
 
-if is_root:
-    # after training, we can save the agent for analysis or the like
-    var_agent.save_agent_state()
-
-    # render one episode after training
-    Investigator.from_agent(var_agent).render_episode(var_agent.env, act_confidently=True)
 
 
-#repeat original agent 
+#build PPO 
 ori_agent = PPOAgent(build_ffn_models, env, horizon=1024, workers=1, distribution=distribution)
 print(f"My Agent's ID: {var_agent.agent_id}")
+
+#train PPO
 ori_agent.drill(n=n, epochs=epochs, batch_size=batch_size)
+
 if is_root:
-    # after training, we can save the agent for analysis or the like
+    # save agents
+    var_agent.save_agent_state()
     ori_agent.save_agent_state()
 
-    # render one episode after training
-    Investigator.from_agent(ori_agent).render_episode(ori_agent.env, act_confidently=True)
+print("reached script end")

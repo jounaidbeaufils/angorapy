@@ -6,7 +6,7 @@ from angorapy.models.convolutional import _build_visual_decoder, _build_openai_e
 from angorapy.models.mighty_maker import *
 from angorapy.models.shadow import build_shadow_brain_models, build_shadow_brain_base
 from angorapy.models.simple import build_ffn_models, build_deeper_models, build_rnn_models, _build_encoding_sub_model, \
-    build_simple_models
+    build_simple_models, build_var_ffn_models
 
 
 def get_model_builder(model="simple", model_type: str = "ffn", shared: bool = False, blind: bool = True) -> Callable:
