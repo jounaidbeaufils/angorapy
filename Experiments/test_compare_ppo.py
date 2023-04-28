@@ -1,4 +1,4 @@
-"""Script to run PPO and VarPPO, store data and compare"""
+"""Script to run PPO and VarPPO, and store the agent"""
 import os
 
 from angorapy.analysis.investigation import Investigator
@@ -23,41 +23,86 @@ from angorapy.agent.gather import VarGatherer
 
 import panda_gym
 
-# For most environments, PPO needs to normalize states and rewards; to add this functionality we wrap the environment
-# with transformers fulfilling this task. You can also add your own custom transformers this way.
+import time
+import random
+
+#used to store IDs in a text file
+start_time = time.strftime("%Y%m%d-%H%M%S")
+random_string = ''.join(random.choices('abcdefghijklmnopqrstuvwxyz', k=4))
+file_name = f"{start_time}_{random_string}"
+
+
+### Default tranformers, distribution and variables ###
+# transformer
 wrappers = [StateNormalizationTransformer, RewardNormalizationTransformer]
+# environment
 env = make_env('PandaReachDense-v2', reward_config=None, transformers=wrappers)
 
-# make policy distribution
+# policy distribution
 distribution = BetaPolicyDistribution(env)
 
-# set common variables
+# common variables
 horizon=1024
 workers=1
 n=5
 epochs=3
 batch_size=64
 
-# build VarPPO
-var_agent = VarPPOAgent(build_var_ffn_models, env, horizon=horizon, workers=workers, distribution=distribution)
-print(f"My Agent's ID: {var_agent.agent_id}")
-var_agent.assign_gatherer(VarGatherer)
-
-# train VarPPO
-var_agent.drill(n=n, epochs=epochs, batch_size=batch_size)
 
 
 
-#build PPO 
-ori_agent = PPOAgent(build_ffn_models, env, horizon=1024, workers=1, distribution=distribution)
-print(f"My Agent's ID: {var_agent.agent_id}")
+def build_models():
+    ### Used to store IDs in a text file ###
+    start_time = time.strftime("%Y%m%d-%H%M%S")
+    random_string = ''.join(random.choices('abcdefghijklmnopqrstuvwxyz', k=4))
+    file_name = f"{start_time}_{random_string}"
+    print(f"model ID saved to {file_name}")
 
-#train PPO
-ori_agent.drill(n=n, epochs=epochs, batch_size=batch_size)
+    ### Build Models ###
+    # build VarPPO
+    var_agent = VarPPOAgent(build_var_ffn_models, env, horizon=horizon, workers=workers, distribution=distribution)
+    var_id_str = str(var_agent.agent_id) + " (var)"
+    store_id(var_id_str, file_name)
+    print(f"Just built agent: {(var_id_str)} \n")
+    var_agent.assign_gatherer(VarGatherer)
 
-if is_root:
-    # save agents
-    var_agent.save_agent_state()
-    ori_agent.save_agent_state()
+    #build PPO 
+    ori_agent = PPOAgent(build_ffn_models, env, horizon=horizon, workers=workers, distribution=distribution)
+    ori_id_str = str(ori_agent.agent_id) + " (ori)"
+    store_id(ori_id_str, file_name)
+    print(f"Just built agent: {ori_id_str} \n")
 
-print("reached script end")
+    return ori_agent, var_agent
+
+def train_save_models(save_interval, ori_agent: PPOAgent, var_agent: VarPPOAgent):
+    ### train and save Model ###
+    #train PPO
+    print(f"Drilling agent: {ori_agent.agent_id}")
+    ori_agent.drill(n=n, epochs=epochs, batch_size=batch_size, save_every=save_interval)
+
+    # train VarPPO
+    print(f"Drilling agent: {var_agent.agent_id}")
+    var_agent.drill(n=n, epochs=epochs, batch_size=batch_size,save_every=save_interval)
+
+def store_id(agent_id_str, file_name):
+    # Open the file in append mode, creating it if it doesn't exist
+    with open(f"Experiments/{file_name}.txt", "a") as f:
+        # Write a new line of text to the file
+        f.write(f"\n {agent_id_str}")
+
+if __name__ == "__main__":
+    ori, var = build_models()
+    train_save_models(3, ori, var)
+
+    print("Training done")
+
+### testing agent retrival ###
+#re_ori = PPOAgent.from_agent_state(ori.agent_id, "b")
+#print(f"just loaded {ori.agent_id}")
+#stats, _ = re_ori.evaluate(n=10, act_confidently=False)
+#print(stats.episode_lengths)
+
+#re_var = VarPPOAgent.from_agent_state(var.agent_id, "b")
+#print(f"just loaded {var.agent_id}")
+#stats, _ = re_var.evaluate(n=10, act_confidently=False)
+#print(stats.episode_lengths)

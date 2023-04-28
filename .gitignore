@@ -20,6 +20,8 @@ rnnconstruction/firsttrainhistory
 rnnconstruction/saved/
 
 tests/storage/
+# (Jounaid)
+Experiments\*.txt
 fixedpointfinder/saved/
 
 ### PyCharm+all ###
