@@ -28,9 +28,9 @@ if __name__ == "__main__":
                             workers=settings.workers, 
                             distribution=settings.distribution)
         var_agent.assign_gatherer(VarGatherer)
-
-        agent_str = var_agent.agent_id + " var"
-        settings.store_id(agent_str)
+        if is_root:
+            agent_str = var_agent.agent_id + " var"
+            settings.store_id(agent_str)
 
     else:
         #get the model

@@ -42,7 +42,7 @@ batch_size=64
 save_interval = 3
 
 ### Experiment tage ###
-experiment_str = "pmi test run" # insert experiment tag
+experiment_str = "simultaneuos mpi test run" # insert experiment tag
 
 ### Model details ###
 make_new_models = True

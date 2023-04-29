@@ -86,7 +86,7 @@ def train_save_models(save_interval, ori_agent: PPOAgent, var_agent: VarPPOAgent
 
 def store_id(agent_id_str, file_name):
     # Open the file in append mode, creating it if it doesn't exist
-    with open(f"Experiments/{file_name}.txt", "a") as f:
+    with open(f"{file_name}.txt", "a") as f:
         # Write a new line of text to the file
         f.write(f"\n {agent_id_str}")
 

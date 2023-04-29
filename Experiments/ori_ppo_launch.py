@@ -27,9 +27,9 @@ if __name__ == "__main__":
                             horizon=settings.horizon, 
                             workers=settings.workers, 
                             distribution=settings.distribution)
-        
-        agent_str = ori_agent.agent_id + " ori"
-        settings.store_id(agent_str)
+        if is_root:
+            agent_str = ori_agent.agent_id + " ori"
+            settings.store_id(agent_str)
 
     else:
         #get the model
