@@ -21,7 +21,7 @@ from angorapy.agent.gather import VarGatherer
 import config_thing as settings
 
 if __name__ == "__main__":
-    if settings.make_new_models:
+    if settings.var_agent_id is None:
         # build model
         var_agent = VarPPOAgent(build_var_ffn_models, settings.env, 
                             horizon=settings.horizon, 
@@ -35,5 +35,6 @@ if __name__ == "__main__":
     else:
         #get the model
         var_agent = VarPPOAgent.from_agent_state(settings.var_agent_id)
+        var_agent.assign_gatherer(VarGatherer)
 
     var_agent.drill(n=settings.n, epochs=settings.epochs, batch_size=settings.batch_size, save_every=settings.save_interval)

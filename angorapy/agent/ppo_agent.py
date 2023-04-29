@@ -1360,3 +1360,105 @@ class VarPPOAgent(PPOAgent):
             print(f"Drill finished after {round(time.time() - full_drill_start_time, 2)}serialization.")
 
         return self
+    
+    @staticmethod
+    def from_agent_state(agent_id: int, from_iteration: Union[int, str] = None, force_env_name=None,
+                         path_modifier="") -> "VarPPOAgent":
+        """Build an agent from a previously saved state.
+
+        Args:
+            agent_id:           the ID of the agent to be loaded
+            from_iteration:     from which iteration to load, if None (default) use most recent, can be iteration int
+                                or ["b", "best"] for best, if such was saved.
+
+        Returns:
+            loaded_agent: a PPOAgent object of the same state as the one saved into the path specified by agent_id
+        """
+        # TODO also load the state of the optimizers
+        agent_path = path_modifier + BASE_SAVE_PATH + f"/{agent_id}"
+        if not os.path.isdir(agent_path):
+            raise FileNotFoundError(
+                "The given agent ID does not match any existing save history from your current path.")
+
+        if len(os.listdir(agent_path)) == 0:
+            raise FileNotFoundError("The given agent ID'serialization save history is empty.")
+
+        # determine loading point
+        latest_matches = PPOAgent.get_saved_iterations(agent_id)
+        if from_iteration is None:
+            if len(latest_matches) > 0:
+                from_iteration = max(latest_matches)
+            else:
+                from_iteration = "best"
+        elif isinstance(from_iteration, str):
+            assert from_iteration.lower() in ["best", "b", "last"], "Unknown string identifier, can only be 'best'/'b'/'last' or int."
+            if from_iteration == "b":
+                from_iteration = "best"
+            if from_iteration == "last" and not os.path.isdir(f"{agent_path}/last"):
+                from_iteration = "best"
+        else:
+            assert from_iteration in latest_matches, "There is no save at this iteration."
+
+        # make stack of fallbacks in case the targeted iteration is corrupted
+        fallback_stack = ["best", "last"]
+        if len(latest_matches) > 0:
+            fallback_stack.append(max(latest_matches))
+
+        can_load = False
+        while not can_load:
+            try:
+                loading_path = f"{agent_path}/{from_iteration}/"
+                with open(f"{loading_path}/parameters.json", "r") as f:
+                    parameters = json.load(f)
+
+                can_load = True
+            except json.decoder.JSONDecodeError as e:
+                print(f"The parameter file of {from_iteration} seems to be corrupted. "
+                      f"Falling back to {fallback_stack[0]}.")
+                from_iteration = fallback_stack.pop(0)
+
+        if is_root:
+            print(f"Loading from iteration {from_iteration}.")
+
+        env = make_env(parameters["env_name"] if force_env_name is None else force_env_name,
+                       reward_config=parameters.get("reward_configuration"),
+                       transformers=transformers_from_serializations(parameters["transformers"]))
+        model_builder = getattr(models, parameters["builder_function_name"])
+        distribution = getattr(policies, parameters["distribution"])(env)
+
+        loaded_agent = VarPPOAgent(model_builder, environment=env, horizon=parameters["horizon"],
+                                workers=parameters["n_workers"], learning_rate=parameters["learning_rate"],
+                                discount=parameters["discount"], lam=parameters["lam"], clip=parameters["clip"],
+                                c_entropy=parameters["c_entropy"], c_value=parameters["c_value"],
+                                gradient_clipping=parameters["gradient_clipping"],
+                                clip_values=parameters["clip_values"], tbptt_length=parameters["tbptt_length"],
+                                lr_schedule=parameters["lr_schedule_type"], distribution=distribution, _make_dirs=False,
+                                reward_configuration=parameters["reward_configuration"])
+
+        for p, v in parameters.items():
+            if p in ["distribution", "transformers", "c_entropy", "c_value", "gradient_clipping", "clip", "optimizer"]:
+                continue
+
+            loaded_agent.__dict__[p] = v
+
+        loaded_agent.joint.load_weights(f"{BASE_SAVE_PATH}/{agent_id}/" + f"/{from_iteration}/weights")
+
+        if "optimizer" in parameters.keys():  # for backwards compatibility
+            if os.path.isfile(agent_path + f"/{from_iteration}/optimizer_weights.npz"):
+                optimizer_weights = list(np.load(agent_path + f"/{from_iteration}/optimizer_weights.npz").values())
+                parameters["optimizer"]["weights"] = optimizer_weights
+
+                loaded_agent.optimizer = MpiAdam.from_serialization(optimization_comm,
+                                                                    parameters["optimizer"],
+                                                                    loaded_agent.joint.trainable_variables)
+            else:
+                loaded_agent.optimizer = MpiAdam.from_serialization(optimization_comm,
+                                                                    parameters["optimizer"],
+                                                                    loaded_agent.joint.trainable_variables)
+            if is_root:
+                print("Loaded optimizer.")
+
+        # mark the loading
+        loaded_agent.loading_history.append([loaded_agent.iteration])
+
+        return loaded_agent
