@@ -22,6 +22,8 @@ rnnconstruction/saved/
 tests/storage/
 # (Jounaid)
 Experiments/*.txt
+Experiments/config_thing.py
+
 fixedpointfinder/saved/
 
 ### PyCharm+all ###
