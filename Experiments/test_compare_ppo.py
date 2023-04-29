@@ -1,4 +1,4 @@
-"""Script to run PPO and VarPPO, and store the agent"""
+"""Script to run PPO and VarPPO, and stores the agents"""
 import os
 
 from angorapy.analysis.investigation import Investigator
