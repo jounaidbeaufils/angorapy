@@ -11,12 +11,9 @@ try:
 except:
     is_root = True
 
-from angorapy.agent.ppo_agent import VarPPOAgent, PPOAgent
+from angorapy.agent.ppo_agent import PPOAgent
 
 from angorapy.models import build_ffn_models
-from angorapy.models.simple import build_var_ffn_models
-
-from angorapy.agent.gather import VarGatherer 
 
 import config_thing as settings
 
