@@ -25,7 +25,8 @@ if __name__ == "__main__":
         var_agent = VarPPOAgent(model_builder=build_var_ffn_models, environment=settings.env, 
                             horizon=settings.horizon, 
                             workers=settings.workers, 
-                            distribution=settings.distribution)
+                            distribution=settings.distribution,
+                            var_by_adv=True)
         var_agent.assign_gatherer(VarGatherer)
         if is_root:
             agent_str = var_agent.agent_id + " var"

@@ -165,9 +165,9 @@ def learn_on_batch_with_var(batch,
                                     is_recurrent=is_recurrent)
         
         var_term = tf.multiply(c_var, pseudo_variance_loss)
-        
+
         if var_by_adv:
-            advantage = tf.reduce_mean(batch[advantage])
+            advantage = tf.reduce_mean(batch["advantage"])
             var_term = tf.divide(var_term, advantage)
 
         # combine weighted losses
