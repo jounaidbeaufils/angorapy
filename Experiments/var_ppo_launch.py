@@ -22,7 +22,7 @@ import config_thing as settings
 if __name__ == "__main__":
     if settings.var_agent_id is None:
         # build model
-        var_agent = VarPPOAgent(build_var_ffn_models, settings.env, 
+        var_agent = VarPPOAgent(model_builder=build_var_ffn_models, environment=settings.env, 
                             horizon=settings.horizon, 
                             workers=settings.workers, 
                             distribution=settings.distribution)

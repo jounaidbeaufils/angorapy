@@ -35,20 +35,20 @@ distribution = BetaPolicyDistribution(env)
 
 # common variables
 horizon=1024
-workers=3
-n=110
+workers=1
+n=20
 epochs=3
 batch_size=64
 save_interval = 3
 
 ### Experiment tage ###
-experiment_str = "simultaneuos mpi test run" # insert experiment tag
+experiment_str = "var_by_adv" # insert experiment tag
 
 ### Model details ###
 #use to continue training an older model
 #set to None to make new agent
 ori_agent_id = 1682774068794780  
-var_agent_id = 1682781944436042   
+var_agent_id = 1682859798938763   
 
 def store_id(agent_id_str):
     # Open the file in append mode, creating it if it doesn't exist

@@ -997,8 +997,7 @@ class VarPPOAgent(PPOAgent):
                  debug: bool = False,
                  pretrained_components: list = None):
         
-        super().__init__(self,
-                 model_builder=model_builder,
+        super().__init__(model_builder=model_builder,
                  environment=environment,
                  horizon=horizon,
                  workers=workers,
@@ -1477,13 +1476,15 @@ class VarPPOAgent(PPOAgent):
                                 workers=parameters["n_workers"], learning_rate=parameters["learning_rate"],
                                 discount=parameters["discount"], lam=parameters["lam"], clip=parameters["clip"],
                                 c_entropy=parameters["c_entropy"], c_value=parameters["c_value"], c_var=parameters["c_var"],
-                                div_by_adv=parameters["div_by_adv"], gradient_clipping=parameters["gradient_clipping"],
+                                var_by_adv=parameters["var_by_adv"], gradient_clipping=parameters["gradient_clipping"],
                                 clip_values=parameters["clip_values"], tbptt_length=parameters["tbptt_length"],
                                 lr_schedule=parameters["lr_schedule_type"], distribution=distribution, _make_dirs=False,
                                 reward_configuration=parameters["reward_configuration"])
 
         for p, v in parameters.items():
-            if p in ["distribution", "transformers", "c_entropy", "c_value", "gradient_clipping", "clip", "optimizer"]:
+            if p in ["distribution", "transformers", "c_entropy", "c_value", 
+                     "c_var", # (Jounaid)
+                     "gradient_clipping", "clip", "optimizer"]:
                 continue
 
             loaded_agent.__dict__[p] = v
@@ -1509,3 +1510,20 @@ class VarPPOAgent(PPOAgent):
         loaded_agent.loading_history.append([loaded_agent.iteration])
 
         return loaded_agent
+
+    def get_parameters(self):
+        """Get the agents parameters necessary to reconstruct it."""
+        parameters = self.__dict__.copy()
+        del parameters["env"]
+        del parameters["policy"], parameters["value"], parameters["joint"], parameters["distribution"]
+        del parameters["optimizer"], parameters["lr_schedule"], parameters["model_builder"], parameters["gatherer_class"]
+
+        parameters["c_entropy"] = parameters["c_entropy"].numpy().item()
+        parameters["c_value"] = parameters["c_value"].numpy().item()
+        parameters["c_var"] = parameters["c_var"].numpy().item() # (Jounaid)
+        parameters["clip"] = parameters["clip"].numpy().item()
+        parameters["distribution"] = self.distribution.__class__.__name__
+        parameters["transformers"] = self.env.serialize()
+        parameters["optimizer"] = self.optimizer.serialize()
+
+        return parameters

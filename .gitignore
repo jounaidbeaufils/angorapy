@@ -21,7 +21,7 @@ rnnconstruction/saved/
 
 tests/storage/
 # (Jounaid)
-Experiments/*.txt
+experiments_log.txt
 
 fixedpointfinder/saved/
 
