@@ -974,6 +974,53 @@ class PPOAgent:
         return policy, value, joint
 
 class VarPPOAgent(PPOAgent):
+    def __init__(self,
+                 model_builder: Callable,
+                 environment: BaseWrapper,
+                 horizon: int = 1024,
+                 workers: int = 8,
+                 learning_rate: float = 0.001,
+                 discount: float = 0.99,
+                 lam: float = 0.95,
+                 clip: float = 0.2,
+                 c_entropy: float = 0.01,
+                 c_value: float = 0.5,
+                 c_var: float = 0.01,
+                 var_by_adv: bool = False,
+                 gradient_clipping: float = None,
+                 clip_values: bool = True,
+                 tbptt_length: int = 16,
+                 lr_schedule: str = None,
+                 distribution: BasePolicyDistribution = None,
+                 reward_configuration: str = None,
+                 _make_dirs=True,
+                 debug: bool = False,
+                 pretrained_components: list = None):
+        
+        super().__init__(self,
+                 model_builder=model_builder,
+                 environment=environment,
+                 horizon=horizon,
+                 workers=workers,
+                 learning_rate=learning_rate,
+                 discount=discount,
+                 lam=lam,
+                 clip=clip,
+                 c_entropy=c_entropy,
+                 c_value=c_value,
+                 gradient_clipping=gradient_clipping,
+                 clip_values=clip_values,
+                 tbptt_length=tbptt_length,
+                 lr_schedule=lr_schedule,
+                 distribution=distribution,
+                 reward_configuration=reward_configuration,
+                 _make_dirs=_make_dirs,
+                 debug=debug,
+                 pretrained_components=pretrained_components)
+        
+        self.c_var = tf.constant(c_var, dtype=tf.float32)
+        self.var_by_adv = var_by_adv
+
     def optimize(self, dataset: tf.data.TFRecordDataset, epochs: int, batch_size: Union[int, Tuple[int, int]]) -> None:
         """Optimize the agent's policy and value network based on a given dataset.
         
@@ -1015,7 +1062,7 @@ class VarPPOAgent(PPOAgent):
                             batch=b, joint=self.joint, distribution=self.distribution,
                             continuous_control=self.continuous_control, clip_values=self.clip_values,
                             gradient_clipping=self.gradient_clipping, clipping_bound=self.clip, c_value=self.c_value,
-                            c_entropy=self.c_entropy, is_recurrent=self.is_recurrent)
+                            c_entropy=self.c_entropy, c_var=self.c_var, var_by_adv=self.var_by_adv, is_recurrent=self.is_recurrent)
                         self.optimizer.apply_gradients(zip(grad, self.joint.trainable_variables))
                     else:
                         # truncated back propagation through time
@@ -1429,8 +1476,8 @@ class VarPPOAgent(PPOAgent):
         loaded_agent = VarPPOAgent(model_builder, environment=env, horizon=parameters["horizon"],
                                 workers=parameters["n_workers"], learning_rate=parameters["learning_rate"],
                                 discount=parameters["discount"], lam=parameters["lam"], clip=parameters["clip"],
-                                c_entropy=parameters["c_entropy"], c_value=parameters["c_value"],
-                                gradient_clipping=parameters["gradient_clipping"],
+                                c_entropy=parameters["c_entropy"], c_value=parameters["c_value"], c_var=parameters["c_var"],
+                                div_by_adv=parameters["div_by_adv"], gradient_clipping=parameters["gradient_clipping"],
                                 clip_values=parameters["clip_values"], tbptt_length=parameters["tbptt_length"],
                                 lr_schedule=parameters["lr_schedule_type"], distribution=distribution, _make_dirs=False,
                                 reward_configuration=parameters["reward_configuration"])

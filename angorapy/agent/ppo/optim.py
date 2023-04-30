@@ -99,6 +99,8 @@ def learn_on_batch_with_var(batch,
                             gradient_clipping: Union[tf.Tensor, None],
                             c_value: tf.Tensor,
                             c_entropy: tf.Tensor,
+                            c_var: tf.Tensor,
+                            var_by_adv: bool,
                             is_recurrent: bool):
     """Optimize a given network on the given batch.
 
@@ -161,9 +163,15 @@ def learn_on_batch_with_var(batch,
                                     clip = clip_values,
                                     clipping_bound= clipping_bound,
                                     is_recurrent=is_recurrent)
+        
+        var_term = tf.multiply(c_var, pseudo_variance_loss)
+        
+        if var_by_adv:
+            advantage = tf.reduce_mean(batch[advantage])
+            var_term = tf.divide(var_term, advantage)
 
         # combine weighted losses
-        total_loss = policy_loss + tf.multiply(c_value, value_loss) - tf.multiply(c_entropy, entropy) + tf.multiply(0.001, pseudo_variance_loss)
+        total_loss = policy_loss + tf.multiply(c_value, value_loss) - tf.multiply(c_entropy, entropy) + var_term
 
     # calculate the gradient of the joint model based on total loss
     gradients = tape.gradient(total_loss, joint.trainable_variables)
