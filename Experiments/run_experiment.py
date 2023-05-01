@@ -45,9 +45,10 @@ parser.add_argument("--c_entropy", type=float, default=0.01)
 parser.add_argument("--save_interval", type=int, default=64)
 parser.add_argument("--agent_id", type=int, default=None)# set ID to load a past agent
 
-parser.add_argument("--c_var", type=float, default=0.001) # only used by VarRPOAgent
-parser.add_argument("--abs", type=bool, default=False)# only used by VarRPOAgent
-parser.add_argument("--div", type=bool, default=False)# only used by VarRPOAgent
+## arguements only used with VarPPOAgent ##
+parser.add_argument("--c_var", type=float, default=0.001)
+parser.add_argument("--abs", type=bool, default=False)
+parser.add_argument("--div", type=bool, default=False)
 
 args = parser.parse_args()
 
