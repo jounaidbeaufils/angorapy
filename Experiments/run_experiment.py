@@ -41,9 +41,11 @@ parser.add_argument("--workers", type=int, default=3)
 parser.add_argument("--n", type=int, default=20)
 parser.add_argument("--epochs", type=int, default=3)
 parser.add_argument("--batch_size", type=int, default=64)
+parser.add_argument("--c_entropy", type=float, default=0.01)
 parser.add_argument("--save_interval", type=int, default=64)
 parser.add_argument("--agent_id", type=int, default=None)# set ID to load a past agent
 
+parser.add_argument("--c_var", type=float, default=0.001) # only used by VarRPOAgent
 parser.add_argument("--abs", type=bool, default=False)# only used by VarRPOAgent
 parser.add_argument("--div", type=bool, default=False)# only used by VarRPOAgent
 
@@ -61,7 +63,9 @@ def build_agent():
     if args.var_agent:
         agent = VarPPOAgent(model_builder=build_var_ffn_models, environment=env, 
                             horizon=args.horizon, 
-                            workers=args.workers, 
+                            workers=args.workers,
+                            c_entropy=args.c_entropy,
+                            c_var=args.c_var, 
                             distribution=distribution,
                             var_by_adv=args.div)
         agent.assign_gatherer(VarGatherer)
@@ -71,14 +75,15 @@ def build_agent():
     else:
         agent = PPOAgent(build_ffn_models, args.env, 
                             horizon=args.horizon, 
-                            workers=args.workers, 
+                            workers=args.workers,
+                            c_entropy=args.c_entropy, 
                             distribution=distribution)
         agent_str = f"ori"
-
-    with open(LOG_FILE_PATH, "a") as f:
-        # Write a new line of text to the file
-        write_time = time.strftime("%Y-%m-%d %H:%M:%S")
-        f.write(f"\n{agent.agent_id} {agent_str} ({args.exp_str} {write_time})")
+    if is_root:
+        with open(LOG_FILE_PATH, "a") as f:
+            # Write a new line of text to the file
+            write_time = time.strftime("%Y-%m-%d %H:%M:%S")
+            f.write(f"\n{agent.agent_id} {agent_str} ({args.exp_str} {write_time})")
     
     return agent
 
