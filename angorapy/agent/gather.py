@@ -361,12 +361,10 @@ class VarGatherer(Gatherer):
                 episode_returns = episode_advantages + values[-episode_steps:]
 
                 # calculate pseudo variance for the finished episode (Jounaid)
-                calculated_variance = variance.future_reward_variance(rewards[-episode_steps:])
-                episode_variances = variance.estimate_episode_variance(calculated_variance,
+                episode_pseudo_variances = variance.estimate_episode_variance(rewards[-episode_steps:],
                                                                  variance_preds[-episode_steps:] + [(0, 1)],
-                                                                 self.discount, self.lam)
-
-                #episode_pooled_var = variance.pooled_variance(episode_variances, variance_preds[-episode_steps:])
+                                                                 self.discount, 
+                                                                 self.lam)
 
                 if is_recurrent:
                     # skip as many steps as are missing to fill the subsequence, then push adv ant ret to buffer
@@ -375,7 +373,7 @@ class VarGatherer(Gatherer):
                 else:
                     advantages.append(episode_advantages)
                     # (Jounaid)
-                    pseudo_variances.extend(episode_variances)
+                    pseudo_variances.extend(episode_pseudo_variances)
 
                 # reset environment to receive next episodes initial state
                 state = env.reset()
@@ -405,7 +403,10 @@ class VarGatherer(Gatherer):
                                                               values[-episode_steps:],
                                                               self.discount, self.lam)
             # (Jounaid)
-            leftover_pseudo_variance = self.var_strategy(rewards[-episode_steps + 1:])
+            leftover_pseudo_variance = variance.estimate_episode_variance(rewards[-episode_steps + 1:],
+                                                                 variance_preds[-episode_steps:],
+                                                                 self.discount, 
+                                                                 self.lam)
             if is_recurrent:
                 leftover_returns = leftover_advantages + values[-len(leftover_advantages) - 1:-1]
                 buffer.push_adv_ret_to_buffer(leftover_advantages, leftover_returns)
