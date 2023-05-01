@@ -124,9 +124,29 @@ def pseudo_var_loss_abs(pseudo_variance: tf.Tensor,
         return tf.reduce_sum(clipped_masked) / tf.reduce_sum(tf.cast(mask, tf.float32))
     else:
         return tf.reduce_mean(pseudo_variance)
-    
-@tf.function
+
 def pseudo_var_loss(pseudo_var_predictions: tf.Tensor,
+               old_pseudo_var: tf.Tensor,
+               true_pseudo_var: tf.Tensor,
+               abs: bool,
+               mask: tf.Tensor,
+               clip: bool,
+               clipping_bound: tf.Tensor,
+               is_recurrent: bool) -> tf.Tensor:
+    if abs:
+        return pseudo_var_loss_abs(true_pseudo_var, mask, is_recurrent)
+    else:
+        return variance_loss(pseudo_var_predictions,
+               old_pseudo_var,
+               true_pseudo_var,
+               mask,
+               clip,
+               clipping_bound,
+               is_recurrent)
+        
+
+@tf.function
+def variance_loss(pseudo_var_predictions: tf.Tensor,
                old_pseudo_var: tf.Tensor,
                true_pseudo_var: tf.Tensor,
                mask: tf.Tensor,

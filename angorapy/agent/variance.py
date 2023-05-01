@@ -5,7 +5,7 @@ from scipy.signal import lfilter
 """Variance methods providing functionality to the agent."""
 
 
-def absolute(rewards):
+def absolute(rewards, values, discount, lam):
     abs_values = (abs(x) for x in rewards)
     return list(abs_values)
 

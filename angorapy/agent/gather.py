@@ -258,11 +258,8 @@ class VarGatherer(Gatherer):
     # define __init__() overide to set default variance stragy
     def __init__(self, worker_id: int, exp_id: int, distribution: BasePolicyDistribution, horizon: int, discount: float, lam: float, subseq_length: int):
         super().__init__(worker_id, exp_id, distribution, horizon, discount, lam, subseq_length)
-        self.var_strategy = variance.future_reward_variance
+        self.var_strategy = variance.estimate_episode_variance
 
-    # define assign_strategy() to set desired strategy
-    def assign_var_strategy(self, strategy):
-        self.var_strategy = strategy
 
     def collect(self,
                 joint: tf.keras.Model,
@@ -317,7 +314,11 @@ class VarGatherer(Gatherer):
             prepared_state = state.with_leading_dims(time=is_recurrent).dict_as_tf()
             policy_out = flatten(joint(prepared_state))
 
-            predicted_distribution_parameters, variance_pred ,value = policy_out[:-2], policy_out[-2], policy_out[-1]
+            if len(joint.output) == 2: #assume using VarGathererAbs subclass (yes this bad code)
+                predicted_distribution_parameters, value = policy_out[:-1], policy_out[-1]
+                variance_pred = [0] * len(value)
+            else:
+                predicted_distribution_parameters, variance_pred ,value = policy_out[:-2], policy_out[-2], policy_out[-1]
 
             # from the action distribution sample an action and remember both the action and its probability
             action, action_probability = self.select_action(predicted_distribution_parameters)
@@ -361,7 +362,7 @@ class VarGatherer(Gatherer):
                 episode_returns = episode_advantages + values[-episode_steps:]
 
                 # calculate pseudo variance for the finished episode (Jounaid)
-                episode_pseudo_variances = variance.estimate_episode_variance(rewards[-episode_steps:],
+                episode_pseudo_variances = self.var_strategy(rewards[-episode_steps:],
                                                                  variance_preds[-episode_steps:] + [(0, 1)],
                                                                  self.discount, 
                                                                  self.lam)
@@ -395,7 +396,11 @@ class VarGatherer(Gatherer):
 
         # get last non-visited state value to incorporate it into the advantage estimation of last visited state
         values.append(np.squeeze(joint(add_state_dims(state, dims=2 if is_recurrent else 1).dict())[-1]))
-        variance_preds.extend(joint(add_state_dims(state, dims=2 if is_recurrent else 1).dict())[-2])
+
+        if len(joint.output) == 2: #assume using VarGathererAbs subclass (yes this bad code)
+                variance_preds.extend([0])
+        else:
+            variance_preds.extend(joint(add_state_dims(state, dims=2 if is_recurrent else 1).dict())[-2])
 
         # if there was at least one step in the environment after the last episode end, calculate advantages for them
         if episode_steps > 1:
@@ -403,7 +408,7 @@ class VarGatherer(Gatherer):
                                                               values[-episode_steps:],
                                                               self.discount, self.lam)
             # (Jounaid)
-            leftover_pseudo_variance = variance.estimate_episode_variance(rewards[-episode_steps + 1:],
+            leftover_pseudo_variance = self.var_strategy(rewards[-episode_steps + 1:],
                                                                  variance_preds[-episode_steps:],
                                                                  self.discount, 
                                                                  self.lam)
@@ -461,6 +466,11 @@ class VarGatherer(Gatherer):
         tf.compat.v1.reset_default_graph()
 
         return stats
+
+class VarGathererAbs(VarGatherer):
+    def __init__(self, worker_id: int, exp_id: int, distribution: BasePolicyDistribution, horizon: int, discount: float, lam: float, subseq_length: int):
+        super().__init__(worker_id, exp_id, distribution, horizon, discount, lam, subseq_length)
+        self.var_strategy = variance.absolute
 
 class EpsilonGreedyGatherer(Gatherer):
     """Exemplary epsilon greedy gathering strategy.

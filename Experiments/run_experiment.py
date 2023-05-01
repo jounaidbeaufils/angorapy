@@ -18,7 +18,7 @@ from angorapy.common.transformers import RewardNormalizationTransformer, StateNo
 from angorapy.common.wrappers import make_env
 
 from angorapy.agent.ppo_agent import PPOAgent,VarPPOAgent
-from angorapy.agent.gather import VarGatherer
+from angorapy.agent.gather import VarGatherer, VarGathererAbs
 from angorapy.models import build_var_ffn_models, build_ffn_models
 
 import panda_gym
@@ -61,17 +61,22 @@ def load_agent():
         agent = PPOAgent.from_agent_state(args.agent_id)
 
 def build_agent():
+
     if args.var_agent:
-        agent = VarPPOAgent(model_builder=build_var_ffn_models, environment=env, 
+
+        model_builder = build_ffn_models if args.abs else build_var_ffn_models
+        agent = VarPPOAgent(model_builder=model_builder, environment=env, 
                             horizon=args.horizon, 
                             workers=args.workers,
                             c_entropy=args.c_entropy,
                             c_var=args.c_var, 
                             distribution=distribution,
-                            var_by_adv=args.div)
-        agent.assign_gatherer(VarGatherer)
+                            var_by_adv=args.div,
+                            abs=args.abs)
+        
+        gatherer = VarGathererAbs if args.abs else VarGatherer
+        agent.assign_gatherer(gatherer)
         agent_str = f"var {'div' if args.div else ''} {'abs' if args.abs else ''}"
-
 
     else:
         agent = PPOAgent(build_ffn_models, args.env, 
