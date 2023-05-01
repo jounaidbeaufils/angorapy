@@ -151,14 +151,14 @@ def pseudo_var_loss(pseudo_var_predictions: tf.Tensor,
     tf.debugging.assert_all_finite(true_pseudo_var, "true_pseudo_var is not all finite!")
 
     # Convert list of tuples to separate lists
-    a_list, b_list = tf.split(true_pseudo_var, num_or_size_splits=2, axis=1)
+    var_col, n_col = tf.split(true_pseudo_var, num_or_size_splits=2, axis=1)
 
     # Convert lists to tensors
-    a_tensor = tf.squeeze(a_list)
-    b_tensor = tf.squeeze(b_list)
+    var_col = tf.squeeze(var_col)
+    n_col = tf.squeeze(n_col)
 
-    # Subtract a_tensor from the first column of tensor and b_tensor from the second column of tensor
-    diff = tf.subtract(pseudo_var_predictions, tf.stack([a_tensor, b_tensor], axis=1))
+    # Subtract var_col from the first column of predictions and c_col from the second column of predictions
+    diff = tf.subtract(pseudo_var_predictions, tf.stack([var_col, n_col], axis=1))
 
 
     error = tf.square(diff)
