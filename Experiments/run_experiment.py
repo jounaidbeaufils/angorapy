@@ -49,6 +49,7 @@ parser.add_argument("--div", type=bool, default=False)# only used by VarRPOAgent
 
 args = parser.parse_args()
 
+### build and load agent ###
 def load_agent():
     if args.var_agent:
         agent = VarPPOAgent.from_agent_state(args.agent_id)
@@ -82,7 +83,8 @@ def build_agent():
     return agent
 
 if __name__ == "__main__":
-    # transformer
+    ### Run Script ###
+    # transformers
     wrappers = [StateNormalizationTransformer, RewardNormalizationTransformer]
     # environment
     env = make_env(args.env, reward_config=None, transformers=wrappers)
@@ -90,10 +92,12 @@ if __name__ == "__main__":
     # policy distribution
     distribution = BetaPolicyDistribution(env)
     
+    # build or load agent
     if args.agent_id is None:
         agent = build_agent()
     else:
         agent = load_agent()
 
+    # train agent
     agent.drill(n=args.n, epochs=args.epochs, batch_size=args.batch_size, save_every=args.save_interval)
     
