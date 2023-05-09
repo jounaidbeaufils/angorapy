@@ -18,7 +18,7 @@ from angorapy.common.transformers import RewardNormalizationTransformer, StateNo
 from angorapy.common.wrappers import make_env
 
 from angorapy.agent.ppo_agent import PPOAgent,VarPPOAgent
-from angorapy.agent.gather import VarGatherer, VarGathererAbs
+from angorapy.agent.gather import VarGatherer, VarGathererAbs, VarGathererNoPreds
 from angorapy.models import build_var_ffn_models, build_ffn_models
 
 import panda_gym
@@ -32,7 +32,8 @@ parser = argparse.ArgumentParser()
 
 ## required arguements ##
 parser.add_argument("--exp_str", type=str, required=True)
-parser.add_argument("--var_agent", type=bool, required=True) # set false to run the PPOAgent
+#parser.add_argument("--var_agent", type=bool, required=True) # set false to run the PPOAgent, replaced this with gather_type
+parser.add_argument("--gather_type", type=str, choices=["var_pred, var_no_pred, abs, ori"]) # need to add noise
 
 ## arguements with defaults ##
 parser.add_argument("--env", type=str, default='PandaReachDense-v2')
@@ -47,23 +48,37 @@ parser.add_argument("--agent_id", type=int, default=None)# set ID to load a past
 
 ## arguements only used with VarPPOAgent ##
 parser.add_argument("--c_var", type=float, default=0.001)
-parser.add_argument("--abs", type=bool, default=False)
+#parser.add_argument("--abs", type=bool, default=False) replaced this with gather_type
 parser.add_argument("--div", type=bool, default=False)
 
 args = parser.parse_args()
 
+class GathererEnum(Enum):
+    def __init__(self):
+        VAR_PRED = VarGatherer
+        ABS = VarGathererAbs
+        VAR_NO_PRED = VarGathererNoPreds
+        CLASSIC = None
+
 ### build and load agent ###
 def load_agent():
-    if args.var_agent:
-        agent = VarPPOAgent.from_agent_state(args.agent_id)
-        agent.assign_gatherer(VarGatherer)
-    else:
+    if args.gather_type == "ori":
         agent = PPOAgent.from_agent_state(args.agent_id)
+    else: 
+        agent = VarPPOAgent.from_agent_state(args.agent_id)
+        gatherer = getattr(GathererEnum, args.gather_type.upper()).value
+        agent.assign_gatherer(gatherer)
+
 
 def build_agent():
-
-    if args.var_agent:
-
+    if args.gather_type == "ori":
+        agent = PPOAgent(build_ffn_models, args.env, 
+                    horizon=args.horizon, 
+                    workers=args.workers,
+                    c_entropy=args.c_entropy, 
+                    distribution=distribution)
+        agent_str = f"ori"
+    else:
         model_builder = build_ffn_models if args.abs else build_var_ffn_models
         agent = VarPPOAgent(model_builder=model_builder, environment=env, 
                             horizon=args.horizon, 
@@ -74,17 +89,10 @@ def build_agent():
                             var_by_adv=args.div,
                             abs=args.abs)
         
-        gatherer = VarGathererAbs if args.abs else VarGatherer
+        gatherer = getattr(GathererEnum, args.gather_type.upper()).value
         agent.assign_gatherer(gatherer)
         agent_str = f"var {'div' if args.div else ''} {'abs' if args.abs else ''}"
 
-    else:
-        agent = PPOAgent(build_ffn_models, args.env, 
-                            horizon=args.horizon, 
-                            workers=args.workers,
-                            c_entropy=args.c_entropy, 
-                            distribution=distribution)
-        agent_str = f"ori"
     if is_root:
         with open(LOG_FILE_PATH, "a") as f:
             # Write a new line of text to the file
