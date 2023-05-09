@@ -3,7 +3,11 @@ Stores a variables that are shared between ori_ppo_launch.py and var_launch_ppo.
 """
 
 import os
+import sys
 import time
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 
@@ -36,8 +40,8 @@ parser.add_argument("--var_agent", type=bool, required=True) # set false to run 
 
 ## arguements with defaults ##
 parser.add_argument("--env", type=str, default='PandaReachDense-v2')
-parser.add_argument("--horizon", type=int, default=1024)
-parser.add_argument("--workers", type=int, default=3)
+parser.add_argument("--horizon", type=int, default=512)
+parser.add_argument("--workers", type=int, default=12)
 parser.add_argument("--n", type=int, default=20)
 parser.add_argument("--epochs", type=int, default=3)
 parser.add_argument("--batch_size", type=int, default=64)
@@ -92,6 +96,7 @@ def build_agent():
             f.write(f"\n{agent.agent_id} {agent_str} ({args.exp_str} {write_time})")
     
     return agent
+
 
 if __name__ == "__main__":
     ### Run Script ###
