@@ -75,6 +75,10 @@ RUN pip install /ang_tmp \
 
 RUN pip install panda_gym==2.0.4
 
+RUN pip install box2d-py
+RUN pip install gym[all]==0.24.0
+RUN pip uninstall -y mujoco-py
+
 WORKDIR /
 COPY Experiments ./Experiments
 
