@@ -987,7 +987,7 @@ class VarPPOAgent(PPOAgent):
                  c_value: float = 0.5,
                  c_var: float = 0.01,
                  var_by_adv: bool = False,
-                 abs: bool = False,
+                 var_pred: bool = True,
                  gradient_clipping: float = None,
                  clip_values: bool = True,
                  tbptt_length: int = 16,
@@ -1020,7 +1020,7 @@ class VarPPOAgent(PPOAgent):
         
         self.c_var = tf.constant(c_var, dtype=tf.float32)
         self.var_by_adv = var_by_adv
-        self.abs = abs
+        self.var_pred = var_pred
 
     def optimize(self, dataset: tf.data.TFRecordDataset, epochs: int, batch_size: Union[int, Tuple[int, int]]) -> None:
         """Optimize the agent's policy and value network based on a given dataset.
@@ -1063,7 +1063,7 @@ class VarPPOAgent(PPOAgent):
                             batch=b, joint=self.joint, distribution=self.distribution,
                             continuous_control=self.continuous_control, clip_values=self.clip_values,
                             gradient_clipping=self.gradient_clipping, clipping_bound=self.clip, c_value=self.c_value,
-                            c_entropy=self.c_entropy, c_var=self.c_var, var_by_adv=self.var_by_adv, abs=self.abs, is_recurrent=self.is_recurrent)
+                            c_entropy=self.c_entropy, c_var=self.c_var, var_by_adv=self.var_by_adv, var_pred=self.var_pred, is_recurrent=self.is_recurrent)
                         self.optimizer.apply_gradients(zip(grad, self.joint.trainable_variables))
                     else:
                         # truncated back propagation through time

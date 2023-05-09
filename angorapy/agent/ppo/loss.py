@@ -100,7 +100,7 @@ def entropy_bonus(policy_output: tf.Tensor, distribution) -> tf.Tensor:
     return tf.reduce_mean(distribution.entropy(policy_output))
 
 @tf.function
-def pseudo_var_loss_abs(pseudo_variance: tf.Tensor,
+def pseudo_var_loss_no_preds(pseudo_variance: tf.Tensor,
                 mask: tf.Tensor,
                 is_recurrent: bool) -> tf.Tensor:
     """pseudo variance as a measurure of reward variability.
@@ -128,22 +128,21 @@ def pseudo_var_loss_abs(pseudo_variance: tf.Tensor,
 def pseudo_var_loss(pseudo_var_predictions: tf.Tensor,
                old_pseudo_var: tf.Tensor,
                true_pseudo_var: tf.Tensor,
-               abs: bool,
+               var_pred: bool,
                mask: tf.Tensor,
                clip: bool,
                clipping_bound: tf.Tensor,
                is_recurrent: bool) -> tf.Tensor:
-    if abs:
-        return pseudo_var_loss_abs(true_pseudo_var, mask, is_recurrent)
-    else:
+    if var_pred:
         return variance_loss(pseudo_var_predictions,
-               old_pseudo_var,
-               true_pseudo_var,
-               mask,
-               clip,
-               clipping_bound,
-               is_recurrent)
-        
+                             old_pseudo_var,
+                            true_pseudo_var,
+                            mask,
+                            clip,
+                            clipping_bound,
+                            is_recurrent)
+    else:
+        return pseudo_var_loss_no_preds(true_pseudo_var, mask, is_recurrent)
 
 @tf.function
 def variance_loss(pseudo_var_predictions: tf.Tensor,

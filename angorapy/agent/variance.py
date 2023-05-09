@@ -9,7 +9,7 @@ def absolute(rewards, values, discount, lam):
     abs_values = (abs(x) for x in rewards)
     return list(abs_values)
 
-def future_reward_variance(rewards):
+def future_reward_variance(rewards, values=None, discount=None, lam=None):
 # returns the variance of the remaining rewards for each index
     n = len(rewards)
     variance = [0] * n  # Initialize list variance with zeros
@@ -21,7 +21,12 @@ def future_reward_variance(rewards):
     #number of terms
     n_list = [x for x in range(n, -1, -1)]
 
-    return list(zip(variance,n_list))
+    if None in [values, discount, lam]:
+        return list(zip(variance,n_list))
+    else:
+        # apply discount, function is being used by gatherer (yes this is bad code, i should uncouple this)
+        discounted_var = lfilter([1], [1, float(-(discount * lam))], variance[::-1], axis=0)[::-1].astype(NP_FLOAT_PREC)
+        return discounted_var
 
 def estimate_episode_variance(rewards, values, discount, lam):
     """estimate episode variance in the style of estimate_episode_advantages()"""

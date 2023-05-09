@@ -100,7 +100,7 @@ def learn_on_batch_with_var(batch,
                             c_value: tf.Tensor,
                             c_entropy: tf.Tensor,
                             c_var: tf.Tensor,
-                            abs: bool,
+                            var_pred: bool,
                             var_by_adv: bool,
                             is_recurrent: bool):
     """Optimize a given network on the given batch.
@@ -129,11 +129,11 @@ def learn_on_batch_with_var(batch,
         state_batch = {fname: f for fname, f in batch.items() if fname in Sensation.sense_names}
         old_values = batch["value"]
 
-        if abs:
+        if var_pred:
+            policy_output, pseudo_var_output ,value_output = joint(state_batch, training=True)
+        else:
             policy_output ,value_output = joint(state_batch, training=True)
             pseudo_var_output = [0] * len(value_output)
-        else:
-            policy_output, pseudo_var_output ,value_output = joint(state_batch, training=True)
 
         if continuous_control:
             # if action space is continuous, calculate PDF at chosen action value
@@ -164,7 +164,7 @@ def learn_on_batch_with_var(batch,
         pseudo_variance_loss = loss.pseudo_var_loss(pseudo_var_predictions=pseudo_var_output,
                                     old_pseudo_var= batch["variance_preds"],
                                     true_pseudo_var=batch["pseudo_variance"],
-                                    abs=abs,
+                                    var_pred=var_pred,
                                     mask= batch["mask"],
                                     clip = clip_values,
                                     clipping_bound= clipping_bound,

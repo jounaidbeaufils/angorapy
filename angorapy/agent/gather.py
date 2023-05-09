@@ -314,7 +314,7 @@ class VarGatherer(Gatherer):
             prepared_state = state.with_leading_dims(time=is_recurrent).dict_as_tf()
             policy_out = flatten(joint(prepared_state))
 
-            if len(joint.output) == 2: #assume using VarGathererAbs subclass (yes this bad code)
+            if len(joint.output) == 2: #assume using no_preds (yes this bad code)
                 predicted_distribution_parameters, value = policy_out[:-1], policy_out[-1]
                 variance_pred = [0] * len(value)
             else:
