@@ -36,7 +36,7 @@ setup(
         "seaborn",
         "distance",
         "protobuf==3.19.0",
-        "panda_gym==2.0.4",
+        "panda_gym",
 
         # webinterface
         "itsdangerous==2.0.1",

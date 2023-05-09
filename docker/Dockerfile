@@ -73,6 +73,8 @@ RUN pip install /ang_tmp \
     && pip install imageio \
     && rm -rf /ang_tmp
 
+RUN pip install panda_gym==2.0.4
+
 WORKDIR /
 COPY Experiments ./Experiments
 
