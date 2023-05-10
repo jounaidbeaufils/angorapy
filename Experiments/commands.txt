@@ -1,0 +1,19 @@
+python -u fine_tune.py x y z
+
+
+'-u' was sometimes necessary for the MPI to print cycle updates when running multiple workers
+
+'x y z' are the indices of the permutation to run, any number of them works
+
+tweak setting acording to HPC shanenigans, set number of episodes to evaluate on in script
+
+
+
+
+
+python -u run_experiment.py var_ppo_models [model_name]
+
+
+'model_name' from choices in the arg
+
+set the defaults based on HPC shenanigans and hyperparameter finetuning results

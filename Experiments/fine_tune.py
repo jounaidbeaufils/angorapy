@@ -76,7 +76,7 @@ def evaluate_agent(agent):
 
 if __name__ == "__main__":
     for perm_index in args.perm_list:
-        for run_num in range(1):
+        for run_num in range(10):
             perm = permutation()
             agent = train_agent(perm_index, perm)
             avg_reward = evaluate_agent(agent)
