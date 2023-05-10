@@ -73,8 +73,14 @@ RUN pip install /ang_tmp \
     && pip install imageio \
     && rm -rf /ang_tmp
 
+RUN pip install panda_gym==2.0.4
+
+RUN pip install box2d-py
+RUN pip install gym[all]==0.24.0
+RUN pip uninstall -y mujoco-py
+
 WORKDIR /
-COPY angorapy/train.py train.py
+COPY Experiments ./Experiments
 
 # CLEANUP
 RUN pip cache purge
