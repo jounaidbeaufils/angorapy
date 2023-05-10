@@ -42,10 +42,8 @@ def str_to_bool(s):
 parser = argparse.ArgumentParser()
 
 ## required arguements ##
-parser.add_argument("--exp_str", type=str, required=True)
-#parser.add_argument("--var_agent", type=bool, required=True) # set false to run the PPOAgent, replaced this with gather_type
-parser.add_argument("--gather_type", type=str, choices=["var_pred", "var_no_pred", "abs", "ori"], required=True) # need to add noise
-parser.add_argument("--var_pred", type=str_to_bool, required=True) #set false with noise, abs and varNoPreds
+parser.add_argument("exp_str", type=str)
+parser.add_argument("gather_type", type=str, choices=["var_pred", "var_no_pred", "abs", "ori"]) # need to add noise
 
 ## arguements with defaults ##
 parser.add_argument("--env", type=str, default='PandaReachDense-v2')
@@ -60,6 +58,7 @@ parser.add_argument("--agent_id", type=int, default=None)# set ID to load a past
 
 ## arguements only used with VarPPOAgent ##
 parser.add_argument("--c_var", type=float, default=0.001)
+parser.add_argument("--var_discount", type=float, default=0.99)
 parser.add_argument("--div", type=str_to_bool, default=False)
 
 args = parser.parse_args()
@@ -89,15 +88,17 @@ def build_agent():
                     distribution=distribution)
         agent_str = f"ori"
     else:
-        model_builder = build_var_ffn_models if args.var_pred else build_ffn_models
+        var_pred = True if args.gather_type == "var_pred" else False
+        model_builder = build_var_ffn_models if var_pred else build_ffn_models
         agent = VarPPOAgent(model_builder=model_builder, environment=env, 
                             horizon=args.horizon, 
                             workers=args.workers,
                             c_entropy=args.c_entropy,
-                            c_var=args.c_var, 
+                            c_var=args.c_var,
+                            var_discount=args.var_discount, 
                             distribution=distribution,
                             var_by_adv=args.div,
-                            var_pred=args.var_pred)
+                            var_pred=var_pred)
         
         gatherer = getattr(GathererEnum, args.gather_type.upper()).value
         agent.assign_gatherer(gatherer)
