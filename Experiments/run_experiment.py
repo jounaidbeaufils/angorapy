@@ -1,5 +1,5 @@
 """
-Stores a variables that are shared between ori_ppo_launch.py and var_launch_ppo.py
+run any model with argparses
 """
 
 import os
@@ -27,14 +27,15 @@ from enum import Enum
 
 LOG_FILE_PATH = "experiments_log.txt"
 
-### Arg Pass ###
-parser = argparse.ArgumentParser()
-
+### Arg Pass helper ###
 def str_to_bool(s):
     if s.lower() == 'true':
         return True
     elif s.lower() == 'false':
         return False
+
+### Arg Pass ###
+parser = argparse.ArgumentParser()
 
 ## required arguements ##
 parser.add_argument("--exp_str", type=str, required=True)
