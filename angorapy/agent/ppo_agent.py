@@ -981,6 +981,7 @@ class VarPPOAgent(PPOAgent):
                  workers: int = 8,
                  learning_rate: float = 0.001,
                  discount: float = 0.99,
+                 var_discount: float = 0.99,
                  lam: float = 0.95,
                  clip: float = 0.2,
                  c_entropy: float = 0.01,
@@ -1021,6 +1022,7 @@ class VarPPOAgent(PPOAgent):
         self.c_var = tf.constant(c_var, dtype=tf.float32)
         self.var_by_adv = var_by_adv
         self.var_pred = var_pred
+        self.var_discount=var_discount
 
     def optimize(self, dataset: tf.data.TFRecordDataset, epochs: int, batch_size: Union[int, Tuple[int, int]]) -> None:
         """Optimize the agent's policy and value network based on a given dataset.
@@ -1245,6 +1247,7 @@ class VarPPOAgent(PPOAgent):
         actor = self._make_actor(
             horizon=self.horizon,
             discount=self.discount,
+            var_discount=self.var_discount,
             lam=self.lam,
             subseq_length=self.tbptt_length
         )
@@ -1409,6 +1412,18 @@ class VarPPOAgent(PPOAgent):
 
         return self
     
+    def _make_actor(self, horizon, discount, var_discount, lam, subseq_length) -> Gatherer:
+    # create the Gatherer
+        return self.gatherer_class(
+            worker_id=MPI.COMM_WORLD.rank,
+            exp_id=self.agent_id,
+            distribution=self.distribution,
+            horizon=horizon,
+            discount=discount,
+            var_discount = var_discount,
+            lam=lam,
+            subseq_length=subseq_length
+        )
     @staticmethod
     def from_agent_state(agent_id: int, from_iteration: Union[int, str] = None, force_env_name=None,
                          path_modifier="") -> "VarPPOAgent":

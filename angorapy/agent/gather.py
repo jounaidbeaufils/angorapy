@@ -256,9 +256,10 @@ class VarGatherer(Gatherer):
     """Var worker implementation for collecting experience by rolling out a policy."""
 
     # define __init__() overide to set default variance stragy
-    def __init__(self, worker_id: int, exp_id: int, distribution: BasePolicyDistribution, horizon: int, discount: float, lam: float, subseq_length: int):
+    def __init__(self, worker_id: int, exp_id: int, distribution: BasePolicyDistribution, horizon: int, var_discount: float, discount: float, lam: float, subseq_length: int):
         super().__init__(worker_id, exp_id, distribution, horizon, discount, lam, subseq_length)
         self.var_strategy = variance.estimate_episode_variance
+        self.var_discount = var_discount
 
 
     def collect(self,
@@ -364,7 +365,7 @@ class VarGatherer(Gatherer):
                 # calculate pseudo variance for the finished episode (Jounaid)
                 episode_pseudo_variances = self.var_strategy(rewards[-episode_steps:],
                                                                  variance_preds[-episode_steps:] + [(0, 1)],
-                                                                 self.discount, 
+                                                                 self.var_discount, 
                                                                  self.lam)
 
                 if is_recurrent:
@@ -410,7 +411,7 @@ class VarGatherer(Gatherer):
             # (Jounaid)
             leftover_pseudo_variance = self.var_strategy(rewards[-episode_steps + 1:],
                                                                  variance_preds[-episode_steps:],
-                                                                 self.discount, 
+                                                                 self.var_discount, 
                                                                  self.lam)
             if is_recurrent:
                 leftover_returns = leftover_advantages + values[-len(leftover_advantages) - 1:-1]
