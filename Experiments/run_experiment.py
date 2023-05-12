@@ -22,7 +22,7 @@ from angorapy.common.transformers import RewardNormalizationTransformer, StateNo
 from angorapy.common.wrappers import make_env
 
 from angorapy.agent.ppo_agent import PPOAgent,VarPPOAgent
-from angorapy.agent.gather import VarGatherer, VarGathererAbs, VarGathererNoPreds
+from angorapy.agent.gather import VarGatherer, VarGathererAbs, VarGathererNoPreds, VarGathererNoise
 from angorapy.models import build_var_ffn_models, build_ffn_models
 
 import panda_gym
@@ -43,7 +43,7 @@ parser = argparse.ArgumentParser()
 
 ## required arguements ##
 parser.add_argument("exp_str", type=str)
-parser.add_argument("gather_type", type=str, choices=["var_pred", "var_no_pred", "abs", "ori"]) # need to add noise
+parser.add_argument("gather_type", type=str, choices=["var_pred", "var_no_pred", "abs", "noise", "ori"])
 
 ## arguements with defaults ##
 parser.add_argument("--env", type=str, default='PandaReachDense-v2')
@@ -67,6 +67,7 @@ class GathererEnum(Enum):
         VAR_PRED = VarGatherer
         ABS = VarGathererAbs
         VAR_NO_PRED = VarGathererNoPreds
+        NOISE = VarGathererNoise
         CLASSIC = None
 
 ### build and load agent ###

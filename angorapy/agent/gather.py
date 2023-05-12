@@ -478,6 +478,11 @@ class VarGathererNoPreds(VarGatherer):
         super().__init__(worker_id, exp_id, distribution, horizon, var_discount, discount, lam, subseq_length)
         self.var_strategy = variance.future_reward_variance
 
+class VarGathererNoise(VarGatherer):
+    def __init__(self, worker_id: int, exp_id: int, distribution: BasePolicyDistribution, horizon: int, var_discount: float, discount: float, lam: float, subseq_length: int):
+        super().__init__(worker_id, exp_id, distribution, horizon, var_discount, discount, lam, subseq_length)
+        self.var_strategy = variance.noise
+
 class EpsilonGreedyGatherer(Gatherer):
     """Exemplary epsilon greedy gathering strategy.
 

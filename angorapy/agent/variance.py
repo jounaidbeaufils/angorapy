@@ -1,9 +1,13 @@
 import numpy as np
 from angorapy.common.const import NP_FLOAT_PREC
 from scipy.signal import lfilter
+import random
 
 """Variance methods providing functionality to the agent."""
 
+def noise(rewards, values, discount, lam):
+    noise_values = (random.random() for _ in range(len(rewards)))
+    return list(noise_values)
 
 def absolute(rewards, values, discount, lam):
     abs_values = (abs(x) for x in rewards)
