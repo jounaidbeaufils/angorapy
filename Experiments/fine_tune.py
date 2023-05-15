@@ -64,7 +64,7 @@ def train_agent(i: int, permutations):
     agent.assign_gatherer(VarGatherer)
 
     # Run a training loop
-    agent.drill(n=2, epochs=3, batch_size=64, save_every=5)
+    agent.drill(n=300, epochs=3, batch_size=64, save_every=5)
     return agent
 
 def evaluate_agent(agent):
