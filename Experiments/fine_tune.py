@@ -69,10 +69,11 @@ def train_agent(i: int, permutations):
 
 def evaluate_agent(agent):
     #  evaluate the performance of the agent
-    stats, _ = agent.evaluate(n=10, act_confidently=False)
+    stats, _ = agent.evaluate(n=10, act_confidently=False, save=True)
 
     avg_reward = round(statistics.mean(stats.episode_rewards), 2)
     return avg_reward
+
 
 if __name__ == "__main__":
     for perm_index in args.perm_list:
@@ -81,10 +82,10 @@ if __name__ == "__main__":
             agent = train_agent(perm_index, perm)
             avg_reward = evaluate_agent(agent)
 
-            if is_root:
-                with open(LOG_FILE_PATH, "a") as f:
-                    # Write a new line of text to the file
-                    write_time = time.strftime("%Y-%m-%d %H:%M:%S")
-                    f.write(f"\n{agent.agent_id}, " \
-                            f"hyperparameter perm: {perm_index}-{run_num}, " \
-                            f"reward: {avg_reward} ({write_time})")
+            # if is_root:
+            #     with open(LOG_FILE_PATH, "a") as f:
+            #         # Write a new line of text to the file
+            #         write_time = time.strftime("%Y-%m-%d %H:%M:%S")
+            #         f.write(f"\n{agent.agent_id}, " \
+            #                 f"hyperparameter perm: {perm_index}-{run_num}, " \
+            #                 f"reward: {avg_reward} ({write_time})")
