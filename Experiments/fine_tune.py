@@ -37,8 +37,8 @@ args = parser.parse_args()
 def permutation():
     #generate permutations of hyperparameters
     c_entropy = [0.1, 0]
-    c_var = np.linspace(1.03, 0.9, num=5)
-    v_discount = np.linspace(0.1, 0.02, num=5)
+    c_var = np.linspace(0.1, 0.02, num=5)
+    v_discount = np.linspace(1.03, 0.9, num=5)
 
     # return the Cartesian product (every combination) of the three sets
     return list(itertools.product(c_entropy, c_var, v_discount))
