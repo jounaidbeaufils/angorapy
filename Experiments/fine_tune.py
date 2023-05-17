@@ -33,6 +33,7 @@ LOG_FILE_PATH = "experiments_log.txt"
 parser = argparse.ArgumentParser()
 
 ## required arguements ##
+parser.add_argument("--env", type=str, default='PandaPushDense-v2')
 parser.add_argument("perm_list", type=int, nargs='+')
 args = parser.parse_args()
 
@@ -51,7 +52,7 @@ def train_agent(i: int, permutations):
     # transformers
     wrappers = [StateNormalizationTransformer, RewardNormalizationTransformer]
     # environment
-    env = make_env('PandaPushDense-v2', reward_config=None, transformers=wrappers, render=False)
+    env = make_env(args.env, reward_config=None, transformers=wrappers, render=False)
 
     # policy distribution
     distribution = BetaPolicyDistribution(env)
@@ -68,7 +69,7 @@ def train_agent(i: int, permutations):
     agent.assign_gatherer(VarGatherer)
 
     # Run a training loop
-    agent.drill(n=300, epochs=3, batch_size=64, save_every=5)
+    agent.drill(n=300, epochs=3, batch_size=64)
     return agent
 
 
