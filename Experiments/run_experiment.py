@@ -46,7 +46,7 @@ parser.add_argument("exp_str", type=str)
 parser.add_argument("gather_type", type=str, choices=["var_pred", "var_no_pred", "abs", "noise", "ori"])
 
 ## arguements with defaults ##
-parser.add_argument("--env", type=str, default='PandaReachDense-v2')
+parser.add_argument("--env", type=str, default='PandaPushDense-v2')
 parser.add_argument("--horizon", type=int, default=512)
 parser.add_argument("--workers", type=int, default=12)
 parser.add_argument("--n", type=int, default=20)
@@ -119,7 +119,7 @@ if __name__ == "__main__":
     # transformers
     wrappers = [StateNormalizationTransformer, RewardNormalizationTransformer]
     # environment
-    env = make_env(args.env, reward_config=None, transformers=wrappers)
+    env = make_env(args.env, reward_config=None, transformers=wrappers, render=False)
 
     # policy distribution
     distribution = BetaPolicyDistribution(env)
