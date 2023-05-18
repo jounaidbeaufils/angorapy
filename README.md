@@ -1,154 +1,47 @@
-![](https://img.shields.io/pypi/pyversions/angorapy)
-![](https://img.shields.io/pypi/v/angorapy)
-![](https://img.shields.io/github/license/ccnmaastricht/angorapy)
-![](https://img.shields.io/github/stars/ccnmaastricht/angorapy)
-
-
 <br />
 <br />
 
 <p align="center"><img src="docs/img/angorapy.svg" width=25% align="center" /></p>
-<h3> <p align="center"> Anthropomorphic Goal-Oriented Robotic Control for Neuroscientific Modeling </p> </h3>
+<h3> <p align="center"> Variance Modifications of AngoraPy </p> </h3>
 
 <br />
    
-**AngoraPy** is an open source modeling library for [goal-oriented research](https://pubmed.ncbi.nlm.nih.gov/26906502/) in **neuroscience**. It provides a simple interface to train deep neural network models of the human brain on various, customizable, sensorimotor tasks, using reinforcement learning. It thereby empowers goal-driven modeling to surpass the sensory domain and enter that of sensori_motor_ control, closing the perception-action loop. 
+This ReadMe serves as documentation for the additional Gatherers and PPOAgent implementented for Jounaid Beaufils' BTR titled: 'Using Curiosity to Escape Local Maxima in Proximal Policy Optimisation'
 
-**AngoraPy** is designed to require no deeper understanding of reinforcement learning. It employs state-of-the-art machine learning techniques, optimized for distributed computation scaling from local workstations to high-performance computing clusters. We aim to hide as much of this under the hood of an intuitive, high-level API but preserve the option for customizing most aspects of the pipeline.
+Every additional Gatherer requires the VarPPOAgent to run, gatherer is then selected with the `VarPPOAgent.assign_gatherer()` method. While the code is written to be compatible with features of AngoraPy at the time of the fork, recurrent neural networks are not implemented.
 
-This library is developed as part of the [Human Brain Project](https://www.humanbrainproject.eu/) at [CCN Maastricht](https://www.ccnmaastricht.com/). It is an effort to build software by neuroscientists, for neuroscientists. If you have suggestions, requests or questions, feel free to [open an issue](https://github.com/ccnmaastricht/angorapy/issues/new/choose).
+## Variance Term
+The Variance term is a value added to the PPO Loss. This is done by using the additional variance and variance inspired information gathererd by the selected `VarGatherer` and adding this information to the Loss with it's own loss function. Similar to the `loss.policy_loss` or `loss.value_loss`
+### Variance Term Parameters
+ `var_by_adv`,  parameter is used to divide the variance term by the advatage function. So that the variance term is larger when when the advantage is lower. 
+`c_var`, this is the coeffiecient of the variance term
+`var_discount`, this is the discount applied to the variance term.
+## VarGatherers
 
-![Manipulation Gif](docs/gifs/manipulate_best.gif)
+### VarGatherer
+The Gathere is modified to predict the  variance of reward  till episode end and the number of steps till episode end, at every step. This variance prediction is combined with the actual variance of rewards returned by the environment during the episode. The process is similar to the advantage estimation descriped in the PPO paper and implemented in AngoraPy. The estimation relies on pooling the variance according to the number of steps.
 
-## 📥 Installation
+This is the only model that requires the following paramaters in the VarPPOAgent Constructor:
 
-AngoraPy is available on PyPI. 
-
-```bash
-pip install angorapy
-```
-
-### MuJoCo
-To train on any MuJoCo-based environment, you will need MuJoCo. As of late 2021, MuJoCo is free and can be [downloaded here](https://mujoco.org/download). 
-As an interface to python, we use mujoco-py, [available here](https://github.com/openai/mujoco-py). To install both, follow their respective instructions.
-
-If you do not want/can install MuJoCo and/or mujoco-py you can use this framework without MuJoCo. Our implementation automatically checks for a `.mujoco` directory in you home directory. If it does not exist, it will try to avoid loading MuJoCo. However, you can then not load any environments that rely on MuJoCo!
-
-## 🚀 Getting Started
-The scripts `train.py`, `evaluate.py` and `observe.py` provide ready-made scripts for training and evaluating an agent in any environment. With `pretrain.py`, it is possible to pretrain the visual component. `benchmark.py` provides functionality for training a batch of agents possibly using different configs for comparison of strategies.
-
-### Training an Agent
-The `train.py` commandline interface provides a convenient entry-point for running all sorts of experiments using the builtin models and environments in angorapy. You can train an agent on any environment with optional hyperparameters. Additionally, a monitor will be automatically linked to the training of the agent. For more detail consult the <a href="monitor/README.md">README on monitoring</a>.
-
-Base usage of `train.py` is as follows:
-
-    python train.py ENV --architecture MODEL
+    agent  =  VarPPOAgent(...,
+						    model_builder=build_var_ffn_models,
+						    var_pred=True)
     
-For instance, training `LunarLanderContinuous-v2` using the `deeper` architecture is possible by running:
+### VarGathererNoPreds
+This gatherer only calculates the variance of the reward till end of episode for every step of the episode, without any estimation.
 
-    python train.py LunarLanderContinuous-v2 --architecture deeper
-    
-For more advanced options like custom hyperparameters, consult
+### VarGathererAbs
+This gatherer only stores the absolute value of the current step's reward. This serveded as the most basic implementation of cariance curiosity we could think of. `var_discount` does not apply.
 
-    python train.py -h
+### VarGathererNoise 
+This gatherer only generates a random value between 0 and 1 at every step, this is used to check if the gatherers are any better than adding random noise. `var_discount` does not apply.
 
+## Typical Training
+### Basic Setup
+The simplest way to train an agent is by running the `run_experiment.py` script as follows:
 
-### Evaluating and Observing an Agent
-There are two more entry points for evaluating and observing an agent: `evaluate.py` and `observe.py`. General usage is as follows
+	python run_experiment.py <"exp_str"> <"model_name">
 
-    python evaluate.py ID
+Experiment string is a personal reference message. Model names are `var_pred` , `var_no_pred`, `abs` and  `noise`. Both without the greater-than and smaller-than symbols.
 
-Where ID is the agent's ID given when its created (`train.py` prints this outt, in custom scripts get it with `agent.agent_id`).
-
-### Writing a Training Script
-To train agents with custom models, environments, etc. you write your own script. The following is a minimal example:
-
-```python
-from angorapy.common.wrappers import make_env
-from angorapy.models import get_model_builder
-from angorapy.agent.ppo_agent import PPOAgent
-
-env = make_env("ReachAbsolute-v0")
-model_builder = get_model_builder("shadow", "lstm")
-agent = PPOAgent(model_builder, env, workers=24)
-agent.drill(n=100, epochs=10, batch_size=512)
-```
-
-For more details, consult the [examples](examples).
-
-## 🎓 Documentation
-Detailed documentation of AngoraPy is provided in the READMEs of most subpackages. Additionally, we provide [examples and tutorials](examples) that get you started with writing your own scripts using AngoraPy. For further readings on specific modules, consult the following READMEs: 
-
- - [Agent](angorapy/agent) [WIP]
- - [Environments](angorapy/environments)
- - [Models](angorapy/models)
- - [Analysis](angorapy/analysis)
- - [Monitoring](angorapy/monitoring)
-
-If you are missing a documentation for a specific part of AngoraPy, feel free to open an issue and we will do our best to add it.
-
-## 🔀 Distributed Computation
-PPO is an asynchronous algorithm, allowing multiple parallel workers to generate experience independently. 
-We allow parallel gathering and optimization through MPI. Agents will automatically distribute their workers evenly on 
-the available CPU cores, while optimization is distributed over all available GPUs. If no GPUs are available, all CPUs 
-share the task of optimizing.
-
-Distribution is possible locally on your workstation and on HPC sites. 
-
-### 💻 Local Distributed Computing with MPI
-To use MPI locally, you need to have a running MPI implementation, e.g. Open MPI 4 on Ubuntu.
-To execute `train.py` via MPI, run
-
-```bash
-mpirun -np 12 --use-hwthread-cpus python3 train.py ...
-```
-
-where, in this example, 12 is the number of locally available CPU threads and `--use-hwthread-cpus`
-makes available threads (as opposed to only cores). Usage of `train.py` is as described previously.
-
-### :cloud: Distributed Training on SLURM-based HPC clusters
-*Please note that the following is optimized and tested on the specific cluster we use, but should extend to at least 
-any SLURM based setup.*
-
-On any SLURM-based HPC cluster you may submit your job with sbatch usising the following script template:
-
-```bash
-#!/bin/bash -l
-#SBATCH --job-name="angorapy"
-#SBATCH --account=xxx
-#SBATCH --time=24:00:00
-#SBATCH --nodes=32
-#SBATCH --ntasks-per-core=1
-#SBATCH --ntasks-per-node=12
-#SBATCH --cpus-per-task=1
-#SBATCH --partition=normal
-#SBATCH --constraint=gpu&startx
-#SBATCH --hint=nomultithread
-
-export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
-export CRAY_CUDA_MPS=1
-
-# load virtual environment
-source ${HOME}/robovenv/bin/activate
-
-export DISPLAY=:0
-srun python3 -u train.py ...
-```
-
-The number of parallel workers will equal the number of nodes times the number of CPUs per node 
-(32 x 12 = 384 in the template above).
-
-## 🔗 Citing AngoraPy
-
-If you use AngoraPy for your research, please cite us as follows
-
-    Weidler, T., & Senden, M. (2020). AngoraPy: Anthropomorphic Goal-Oriented Robotic Control for Neuroscientific Modeling [Computer software]
-
-Or using bibtex
-
-    @software{angorapy2020,
-        author = {Weidler, Tonio and Senden, Mario},
-        month = {3},
-        title = {{AngoraPy: Anthropomorphic Goal-Oriented Robotic Control for Neuroscientific Modeling}},
-        year = {2020}
-    }
+The agent ID is saved in a `experiments_log.txt` along with the `exp_str`, `model_name` and time. A new one new file is created if need, old ID are safe as each log is is apended on a new line. 
