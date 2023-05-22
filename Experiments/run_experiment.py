@@ -105,11 +105,11 @@ def build_agent():
         agent.assign_gatherer(gatherer)
         agent_str = f"{args.gather_type}"
 
-    if is_root:
-        with open(LOG_FILE_PATH, "a") as f:
-            # Write a new line of text to the file
-            write_time = time.strftime("%Y-%m-%d %H:%M:%S")
-            f.write(f"\n{agent.agent_id} {agent_str} ({args.exp_str} {write_time})")
+    # if is_root:
+    #     with open(LOG_FILE_PATH, "a") as f:
+    #         # Write a new line of text to the file
+    #         write_time = time.strftime("%Y-%m-%d %H:%M:%S")
+    #         f.write(f"\n{agent.agent_id} {agent_str} ({args.exp_str} {write_time})")
     
     return agent
 

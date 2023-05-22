@@ -58,8 +58,8 @@ def train_agent(i: int, permutations):
     distribution = BetaPolicyDistribution(env)
 
     agent = VarPPOAgent(model_builder=build_var_ffn_models, environment=env,
-                        horizon=256,
-                        workers=36,
+                        horizon=512,
+                        workers=12,
                         c_entropy=permutations[i][0],
                         c_var=permutations[i][1],
                         var_discount=permutations[i][2],
