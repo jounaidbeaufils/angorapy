@@ -838,6 +838,7 @@ class PPOAgent:
         parameters["distribution"] = self.distribution.__class__.__name__
         parameters["transformers"] = self.env.serialize()
         parameters["optimizer"] = self.optimizer.serialize()
+        parameters["model_name"] = self.gatherer_class.__name__
 
         return parameters
 
@@ -1542,5 +1543,6 @@ class VarPPOAgent(PPOAgent):
         parameters["distribution"] = self.distribution.__class__.__name__
         parameters["transformers"] = self.env.serialize()
         parameters["optimizer"] = self.optimizer.serialize()
+        parameters["model_name"] = self.gatherer_class.__name__
 
         return parameters
