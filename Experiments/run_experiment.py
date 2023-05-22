@@ -48,7 +48,7 @@ parser.add_argument("gather_type", type=str, choices=["var_pred", "var_no_pred",
 ## arguements with defaults ##
 parser.add_argument("--env", type=str, default='PandaPushDense-v2')
 parser.add_argument("--horizon", type=int, default=512)
-parser.add_argument("--workers", type=int, default=1)
+parser.add_argument("--workers", type=int, default=12)
 parser.add_argument("--n", type=int, default=20)
 parser.add_argument("--epochs", type=int, default=3)
 parser.add_argument("--batch_size", type=int, default=64)
