@@ -11,9 +11,10 @@ tweak setting acording to HPC shanenigans, set number of episodes to evaluate on
 
 
 
-python -u run_experiment.py var_ppo_models [model_name]
+python -u run_experiment.py [some_string] [model_name] --div [bool]
 
-
+'some_str is used in the experiments_log.txt'
 'model_name' from choices in the arg
+--div sets the devision by advantage, available for all models
 
 set the defaults based on HPC shenanigans and hyperparameter finetuning results
