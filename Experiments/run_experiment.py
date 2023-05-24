@@ -52,13 +52,13 @@ parser.add_argument("--workers", type=int, default=12)
 parser.add_argument("--n", type=int, default=20)
 parser.add_argument("--epochs", type=int, default=3)
 parser.add_argument("--batch_size", type=int, default=64)
-parser.add_argument("--c_entropy", type=float, default=0.01)
+parser.add_argument("--c_entropy", type=float, default=0.0)
 parser.add_argument("--save_interval", type=int, default=64)
 parser.add_argument("--agent_id", type=int, default=None)# set ID to load a past agent
 
 ## arguements only used with VarPPOAgent ##
-parser.add_argument("--c_var", type=float, default=0.001)
-parser.add_argument("--var_discount", type=float, default=0.99)
+parser.add_argument("--c_var", type=float, default=0.06)
+parser.add_argument("--var_discount", type=float, default= 0.99)
 parser.add_argument("--div", type=str_to_bool, default=False)
 
 args = parser.parse_args()
