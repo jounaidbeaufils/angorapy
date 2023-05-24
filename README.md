@@ -44,4 +44,4 @@ The simplest way to train an agent is by running the `run_experiment.py` script 
 
 Experiment string is a personal reference message. Model names are `var_pred` , `var_no_pred`, `abs` and  `noise`. Both without the greater-than and smaller-than symbols.
 
-The agent ID is saved in a `experiments_log.txt` along with the `exp_str`, `model_name` and time. A new one new file is created if need, old ID are safe as each log is is apended on a new line. 
+The agent ID is saved in a `experiments_log.txt` along with the `exp_str`, `model_name` and time. A new file is created if need, old ID are safe as each log is is apended on a new line. 
