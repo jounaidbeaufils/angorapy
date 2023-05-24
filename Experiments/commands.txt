@@ -1,5 +1,5 @@
+PARAMETER FINETUNING
 python -u fine_tune.py x y z
-
 
 '-u' was sometimes necessary for the MPI to print cycle updates when running multiple workers
 
@@ -9,12 +9,40 @@ tweak setting acording to HPC shanenigans, set number of episodes to evaluate on
 
 
 
-
-
+RUN DIFFERENT MODELS
 python -u run_experiment.py [some_string] [model_name] --div [bool]
 
-'some_str is used in the experiments_log.txt'
+'some_str' is used in the experiments_log.txt'
 'model_name' from choices in the arg
 --div sets the devision by advantage, available for all models
 
-set the defaults based on HPC shenanigans and hyperparameter finetuning results
+Notes  Tonio:
+- set the defaults based on HPC shenanigans
+- i think you removed 'some_string' right?
+
+
+COMMANDS FOR ENVS
+python run_experiment.py "jounaid" var_pred --div true --env "PandaPushDense-v2"
+python run_experiment.py "jounaid" var_pred --div true --env "PandaReachDense-v2"
+python run_experiment.py "jounaid" var_pred --env "PandaPushDense-v2"
+python run_experiment.py "jounaid" var_pred --env "PandaReachDense-v2"
+
+
+python run_experiment.py "jounaid" var_no_pred --div true --env "PandaPushDense-v2"
+python run_experiment.py "jounaid" var_no_pred --div true --env "PandaReachDense-v2"
+
+
+python run_experiment.py "jounaid" var_no_pred --env "PandaPushDense-v2"
+python run_experiment.py "jounaid" var_no_pred --env "PandaReachDense-v2"
+
+
+python run_experiment.py "jounaid" abs --env "PandaPushDense-v2"
+python run_experiment.py "jounaid" abs --env "PandaReachDense-v2"
+
+
+python run_experiment.py "jounaid" noise --env "PandaPushDense-v2"
+python run_experiment.py "jounaid" noise --env "PandaReachDense-v2"
+
+
+python run_experiment.py "jounaid" ori --env "PandaPushDense-v2"
+python run_experiment.py "jounaid" ori --env "PandaReachDense-v2"
