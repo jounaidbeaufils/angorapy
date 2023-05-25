@@ -22,27 +22,27 @@ Notes  Tonio:
 
 
 COMMANDS FOR ENVS
-python run_experiment.py "jounaid" var_pred --div true --env "PandaPushDense-v2"
-python run_experiment.py "jounaid" var_pred --div true --env "PandaReachDense-v2"
-python run_experiment.py "jounaid" var_pred --env "PandaPushDense-v2"
-python run_experiment.py "jounaid" var_pred --env "PandaReachDense-v2"
+python run_experiment.py jounaid var_pred --div true --env PandaPushDense-v2
+python run_experiment.py jounaid var_pred --div true --env PandaReachDense-v2
+python run_experiment.py jounaid var_pred --env PandaPushDense-v2
+python run_experiment.py jounaid var_pred --env PandaReachDense-v2
 
 
-python run_experiment.py "jounaid" var_no_pred --div true --env "PandaPushDense-v2"
-python run_experiment.py "jounaid" var_no_pred --div true --env "PandaReachDense-v2"
+python run_experiment.py jounaid var_no_pred --div true --env PandaPushDense-v2
+python run_experiment.py jounaid var_no_pred --div true --env PandaReachDense-v2
 
 
-python run_experiment.py "jounaid" var_no_pred --env "PandaPushDense-v2"
-python run_experiment.py "jounaid" var_no_pred --env "PandaReachDense-v2"
+python run_experiment.py jounaid var_no_pred --env PandaPushDense-v2
+python run_experiment.py jounaid var_no_pred --env PandaReachDense-v2
 
 
-python run_experiment.py "jounaid" abs --env "PandaPushDense-v2"
-python run_experiment.py "jounaid" abs --env "PandaReachDense-v2"
+python run_experiment.py jounaid abs --env PandaPushDense-v2
+python run_experiment.py jounaid abs --env PandaReachDense-v2
 
 
-python run_experiment.py "jounaid" noise --env "PandaPushDense-v2"
-python run_experiment.py "jounaid" noise --env "PandaReachDense-v2"
+python run_experiment.py jounaid noise --env PandaPushDense-v2
+python run_experiment.py jounaid noise --env PandaReachDense-v2
 
 
-python run_experiment.py "jounaid" ori --env "PandaPushDense-v2"
-python run_experiment.py "jounaid" ori --env "PandaReachDense-v2"
+python run_experiment.py jounaid ori --env PandaPushDense-v2
+python run_experiment.py jounaid ori --env PandaReachDense-v2
